@@ -1,0 +1,56 @@
+{
+  "version": "2.0.0",
+  "options": {
+    "shell": {
+      "executable": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command"]
+    }
+  },
+  "tasks": [
+    {
+      "label": "stack: up (postgres)",
+      "type": "shell",
+      "command": "./make.ps1 up",
+      "problemMatcher": []
+    },
+    {
+      "label": "db: migrate",
+      "type": "shell",
+      "command": "./make.ps1 migrate",
+      "problemMatcher": []
+    },
+    {
+      "label": "db: sqlc generate",
+      "type": "shell",
+      "command": "./make.ps1 sqlc",
+      "problemMatcher": []
+    },
+    {
+      "label": "api: run",
+      "type": "shell",
+      "command": "./make.ps1 api",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "web: run",
+      "type": "shell",
+      "command": "./make.ps1 web",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "dev: api + web",
+      "dependsOn": ["api: run", "web: run"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
+      "label": "check: all",
+      "type": "shell",
+      "command": "./make.ps1 check",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    }
+  ]
+}

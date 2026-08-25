@@ -1,0 +1,114 @@
+<#
+.SYNOPSIS
+    Task runner for office360. Run  .\make.ps1 <task>
+
+.DESCRIPTION
+    Tasks:
+      up          Start Postgres 16 in Docker (detached) and wait for health
+      down        Stop the Postgres container (data is preserved)
+      nuke        Stop the container AND delete its volume — DESTROYS local data
+      migrate     Apply all pending migrations
+      rollback    Roll back the most recent migration
+      sqlc        Regenerate api/internal/db from db/query + db/migrations
+      api         Run the Go API on $API_PORT (default 8080)
+      web         Run the SvelteKit dev server on 5173
+      check       Build + vet the Go API and type-check the web app
+      psql        Open a psql shell inside the Postgres container
+#>
+[CmdletBinding()]
+param(
+    [Parameter(Position = 0)]
+    [ValidateSet('up', 'down', 'nuke', 'migrate', 'rollback', 'sqlc', 'api', 'web', 'check', 'psql')]
+    [string]$Task = 'check'
+)
+
+$ErrorActionPreference = 'Stop'
+$Root = $PSScriptRoot
+
+function Import-DotEnv {
+    $envFile = Join-Path $Root '.env'
+    if (-not (Test-Path $envFile)) {
+        Write-Warning ".env not found — copying from .env.example"
+        Copy-Item (Join-Path $Root '.env.example') $envFile
+    }
+    Get-Content $envFile | ForEach-Object {
+        if ($_ -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') {
+            $name = $Matches[1]
+            $value = $Matches[2].Trim().Trim('"')
+            Set-Item -Path "env:$name" -Value $value
+        }
+    }
+}
+
+function Assert-LastExit($what) {
+    if ($LASTEXITCODE -ne 0) { throw "$what failed (exit $LASTEXITCODE)" }
+}
+
+Import-DotEnv
+
+switch ($Task) {
+    'up' {
+        docker compose up -d
+        Assert-LastExit 'docker compose up'
+        Write-Host 'Waiting for Postgres to report healthy...' -ForegroundColor Cyan
+        $deadline = (Get-Date).AddSeconds(90)
+        do {
+            Start-Sleep -Seconds 2
+            $state = docker inspect -f '{{.State.Health.Status}}' office360-postgres 2>$null
+        } while ($state -ne 'healthy' -and (Get-Date) -lt $deadline)
+        if ($state -ne 'healthy') { throw "Postgres did not become healthy (last state: '$state')" }
+        Write-Host "Postgres healthy on localhost:$($env:POSTGRES_PORT)" -ForegroundColor Green
+    }
+
+    'down' { docker compose down; Assert-LastExit 'docker compose down' }
+
+    'nuke' {
+        Write-Host 'This deletes the office360 Postgres volume and all local data.' -ForegroundColor Yellow
+        if ((Read-Host "Type 'yes' to continue") -ne 'yes') { Write-Host 'Aborted.'; break }
+        docker compose down -v
+        Assert-LastExit 'docker compose down -v'
+    }
+
+    'migrate' {
+        migrate -path api/db/migrations -database $env:DATABASE_URL up
+        Assert-LastExit 'migrate up'
+    }
+
+    'rollback' {
+        migrate -path api/db/migrations -database $env:DATABASE_URL down 1
+        Assert-LastExit 'migrate down'
+    }
+
+    'sqlc' {
+        Push-Location (Join-Path $Root 'api')
+        try { sqlc generate; Assert-LastExit 'sqlc generate' } finally { Pop-Location }
+        Write-Host 'Regenerated api/internal/db' -ForegroundColor Green
+    }
+
+    'api' {
+        Push-Location (Join-Path $Root 'api')
+        try { go run ./cmd/server } finally { Pop-Location }
+    }
+
+    'web' {
+        Push-Location (Join-Path $Root 'web')
+        try { npm run dev } finally { Pop-Location }
+    }
+
+    'check' {
+        Push-Location (Join-Path $Root 'api')
+        try {
+            go build ./...; Assert-LastExit 'go build'
+            go vet ./...; Assert-LastExit 'go vet'
+        } finally { Pop-Location }
+
+        Push-Location (Join-Path $Root 'web')
+        try { npm run check; Assert-LastExit 'svelte-check' } finally { Pop-Location }
+
+        Write-Host 'All checks passed.' -ForegroundColor Green
+    }
+
+    'psql' {
+        docker exec -it office360-postgres psql -U $env:POSTGRES_USER -d $env:POSTGRES_DB
+    }
+}

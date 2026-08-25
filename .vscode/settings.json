@@ -1,0 +1,32 @@
+{
+  "go.toolsManagement.autoUpdate": true,
+  "go.lintTool": "golangci-lint",
+  "go.formatTool": "gofmt",
+  "gopls": {
+    "formatting.gofumpt": false
+  },
+  "[go]": {
+    "editor.defaultFormatter": "golang.go",
+    "editor.formatOnSave": true,
+    "editor.insertSpaces": false
+  },
+  "[svelte]": {
+    "editor.defaultFormatter": "svelte.svelte-vscode",
+    "editor.formatOnSave": true
+  },
+  "[typescript]": {
+    "editor.formatOnSave": true
+  },
+  "[sql]": {
+    "editor.formatOnSave": false
+  },
+  "files.eol": "\n",
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.svelte-kit": true,
+    "web/package-lock.json": true
+  },
+  "files.associations": {
+    "*.sql": "sql"
+  }
+}

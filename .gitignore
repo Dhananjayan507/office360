@@ -1,0 +1,40 @@
+# --- secrets ---
+.env
+.env.*
+!.env.example
+
+# --- go ---
+/api/bin/
+/api/tmp/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# --- node / sveltekit ---
+node_modules/
+/web/.svelte-kit/
+/web/build/
+/web/.vercel/
+/web/.output/
+.npm/
+*.tsbuildinfo
+
+# --- editors / os ---
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# --- local data ---
+/data/
+*.log
