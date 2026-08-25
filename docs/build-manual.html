@@ -6,7 +6,6 @@
 <meta name="color-scheme" content="light dark">
 <meta name="description" content="Every command and file needed to rebuild the office360 scaffold by hand.">
 <style>
-/* minimal reset — supplied by the artifact host when published, inlined here */
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0}
@@ -411,16 +410,16 @@ trim_trailing_whitespace = false</code></pre></figure>
   <figure class="code"><figcaption><span class="path">.env.example</span><span class="tag new">new file</span></figcaption><pre><code># Copy to .env and adjust. .env is gitignored — never commit real secrets.
 
 # --- postgres (matches docker-compose.yml) ---
-# Port 5433 on the host, not 5432, so this stack can run alongside other local
-# Postgres containers.
+# Port 5434 on the host. 5432 is taken by a host Postgres and 5433 by the
+# ebike stack's container, so this project claims the next free one.
 POSTGRES_USER=office360
 POSTGRES_PASSWORD=office360_dev
 POSTGRES_DB=office360
-POSTGRES_PORT=5433
+POSTGRES_PORT=5434
 
 # --- api ---
 # Used by the Go server and by `migrate`.
-DATABASE_URL=postgres://office360:office360_dev@localhost:5433/office360?sslmode=disable
+DATABASE_URL=postgres://office360:office360_dev@localhost:5434/office360?sslmode=disable
 API_PORT=8080
 API_ENV=development
 
@@ -434,7 +433,7 @@ PUBLIC_API_URL=http://localhost:8080</code></pre></figure>
   <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>Copy-Item .env.example .env</code></pre></figure>
 
   <aside class="note warn">
-    <p><strong>Pick a host port no other stack owns.</strong> 5432 is the Postgres default, so the first containerised database on your machine takes it and the second one fails to bind. Choosing 5433 up front lets this project run at the same time as any other. If you change it, change it in <em>three</em> places: <code>POSTGRES_PORT</code>, the host half of <code>DATABASE_URL</code>, and your own <code>.env</code>.</p>
+    <p><strong>Pick a host port no other stack owns — and check, do not assume.</strong> 5432 is the Postgres default, so the first database on your machine takes it and the second fails to bind. But the next port up is not automatically safe either: on this machine 5432 belongs to a host Postgres <em>and</em> 5433 to another project's container, which is why office360 sits on 5434. Run <code>docker ps</code> and <code>Test-NetConnection localhost -Port &lt;n&gt;</code> before choosing. If you change it, change it in <em>three</em> places: <code>POSTGRES_PORT</code>, the host half of <code>DATABASE_URL</code>, and the default in <code>docker-compose.yml</code>.</p>
   </aside>
 </section>
 
@@ -454,7 +453,7 @@ PUBLIC_API_URL=http://localhost:8080</code></pre></figure>
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-office360_dev}
       POSTGRES_DB: ${POSTGRES_DB:-office360}
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "${POSTGRES_PORT:-5434}:5432"
     volumes:
       - office360_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -1809,7 +1808,7 @@ switch ($Task) {
     <li>The sqlc loop and its ordering constraint (migration first, then query, then generate)</li>
     <li>That <code>api/internal/db/</code> is generated and hand-edits are silently reverted</li>
     <li>The SQLSTATE-to-4xx convention and where the pattern lives</li>
-    <li>Why the host port is 5433 — so nobody "fixes" it back into a collision</li>
+    <li>Why the host port is 5434 — so nobody "fixes" it back into a collision</li>
     <li>The single root <code>.env</code> and the <code>envDir: '..'</code> wiring</li>
     <li>That git identity is per-repo here and must not move to <code>--global</code></li>
     <li>Which command is the real gate before calling work done (<code>./make.ps1 check</code>)</li>
@@ -1969,8 +1968,8 @@ git rebase --continue</code></pre></figure>
           <td>Installed without <code>-tags 'postgres'</code>. Reinstall with it.</td>
         </tr>
         <tr>
-          <td>Port 5432 already allocated</td>
-          <td>Another Postgres container owns it. That is why this project uses 5433.</td>
+          <td>bind: address already in use</td>
+          <td>Another Postgres owns that port. Check with <code>docker ps</code> — on this machine 5432 and 5433 were both taken, so office360 uses 5434.</td>
         </tr>
         <tr>
           <td>API starts, dies on first request</td>
@@ -2012,7 +2011,7 @@ git rebase --continue</code></pre></figure>
     </table>
   </div>
 
-  <p class="foot">Verified on this machine at each checkpoint except step 12, which needs Docker running. Steps 01–11 were executed end to end; <code>go build</code>, <code>go vet</code>, <code>sqlc generate</code>, and <code>svelte-check</code> all pass.</p>
+  <p class="foot">All twelve steps executed end to end on this machine. <code>go build</code>, <code>go vet</code>, <code>sqlc generate</code> and <code>svelte-check</code> pass; Postgres 16.14 runs healthy on 5434 with migration <code>1/u init</code> applied; the API returns <code>db: up</code>, 201 on create and 409 on a duplicate email; and the SvelteKit page renders live rows fetched from the API. See the companion database runbook for the day-to-day Docker and Postgres commands.</p>
 </section>
 
 </div>
