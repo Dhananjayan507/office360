@@ -1,4 +1,5 @@
-// Package httpapi wires the chi router and HTTP handlers onto the sqlc query layer.
+// Package httpapi assembles the chi router and the handlers that sit on the
+// sqlc query layer. All response and error shaping goes through internal/httpx.
 package httpapi
 
 import (
@@ -12,6 +13,7 @@ import (
 
 	"github.com/Dhananjayan507/office360/api/internal/config"
 	"github.com/Dhananjayan507/office360/api/internal/db"
+	"github.com/Dhananjayan507/office360/api/internal/httpx"
 )
 
 type Server struct {
@@ -27,9 +29,11 @@ func NewServer(cfg config.Config, pool *pgxpool.Pool) *Server {
 func (s *Server) Routes() http.Handler {
 	r := chi.NewRouter()
 
+	// Order matters: RequestID must precede the logger so every line carries an
+	// id, and Recoverer must sit inside them so a panic is still logged.
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
+	r.Use(httpx.RequestLogger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(30 * time.Second))
 	r.Use(cors.Handler(cors.Options{
@@ -40,30 +44,32 @@ func (s *Server) Routes() http.Handler {
 		MaxAge:           300,
 	}))
 
-	r.Get("/healthz", s.health)
+	r.Get("/healthz", httpx.Handle(s.health))
 
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Get("/ping", httpx.Handle(s.ping))
+
 		r.Route("/departments", func(r chi.Router) {
-			r.Get("/", s.listDepartments)
-			r.Post("/", s.createDepartment)
-			r.Delete("/{id}", s.deleteDepartment)
+			r.Get("/", httpx.Handle(s.listDepartments))
+			r.Post("/", httpx.Handle(s.createDepartment))
+			r.Delete("/{id}", httpx.Handle(s.deleteDepartment))
 		})
 
 		r.Route("/employees", func(r chi.Router) {
-			r.Get("/", s.listEmployees)
-			r.Post("/", s.createEmployee)
-			r.Get("/{id}", s.getEmployee)
-			r.Patch("/{id}", s.updateEmployee)
-			r.Delete("/{id}", s.deleteEmployee)
+			r.Get("/", httpx.Handle(s.listEmployees))
+			r.Post("/", httpx.Handle(s.createEmployee))
+			r.Get("/{id}", httpx.Handle(s.getEmployee))
+			r.Patch("/{id}", httpx.Handle(s.updateEmployee))
+			r.Delete("/{id}", httpx.Handle(s.deleteEmployee))
 		})
 	})
 
-	r.NotFound(func(w http.ResponseWriter, _ *http.Request) {
-		writeError(w, http.StatusNotFound, "route not found")
-	})
-	r.MethodNotAllowed(func(w http.ResponseWriter, _ *http.Request) {
-		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
-	})
+	r.NotFound(httpx.Handle(func(_ http.ResponseWriter, _ *http.Request) error {
+		return httpx.NotFound("route not found")
+	}))
+	r.MethodNotAllowed(httpx.Handle(func(_ http.ResponseWriter, _ *http.Request) error {
+		return httpx.MethodNotAllowed("method not allowed for this route")
+	}))
 
 	return r
 }

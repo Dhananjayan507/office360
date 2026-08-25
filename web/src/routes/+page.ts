@@ -10,7 +10,7 @@ export const load: PageLoad = async ({ fetch }) => {
 
 		return {
 			employees: employees.data,
-			total: employees.total,
+			total: employees.meta.total ?? employees.data.length,
 			departments: departments.data,
 			apiError: null as string | null
 		};

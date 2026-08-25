@@ -1,5 +1,13 @@
 import { env } from '$env/dynamic/public';
-import type { Department, Employee, EmployeeStatus, Health, ListResponse } from './types';
+import type {
+	Department,
+	Employee,
+	EmployeeStatus,
+	Envelope,
+	ErrorKind,
+	Health,
+	Ping
+} from './types';
 
 /** SvelteKit hands `load` a special fetch; pass it through so SSR requests are traced. */
 type Fetcher = typeof globalThis.fetch;
@@ -8,13 +16,26 @@ interface Options {
 	fetch?: Fetcher;
 }
 
+/**
+ * Mirrors the error envelope from `api/internal/httpx`. `kind` is the stable
+ * thing to branch on — status codes are derived from it, not the other way round.
+ */
 export class ApiError extends Error {
 	constructor(
 		readonly status: number,
-		message: string
+		readonly kind: ErrorKind,
+		message: string,
+		readonly code?: string,
+		readonly fields?: Record<string, string>,
+		readonly requestId?: string
 	) {
 		super(message);
 		this.name = 'ApiError';
+	}
+
+	/** Message for a specific form field, when the API reported one. */
+	fieldError(name: string): string | undefined {
+		return this.fields?.[name];
 	}
 }
 
@@ -25,25 +46,34 @@ function baseUrl(): string {
 async function request<T>(
 	path: string,
 	{ fetch: doFetch = globalThis.fetch, ...init }: RequestInit & Options = {}
-): Promise<T> {
+): Promise<Envelope<T>> {
 	const res = await doFetch(`${baseUrl()}${path}`, {
 		...init,
 		headers: { 'Content-Type': 'application/json', ...init.headers }
 	});
 
-	if (!res.ok) {
-		let message = `${res.status} ${res.statusText}`;
-		try {
-			const body = await res.json();
-			if (body?.error) message = body.error;
-		} catch {
-			// Error body was not JSON — keep the status line.
-		}
-		throw new ApiError(res.status, message);
+	if (res.status === 204) return { data: undefined as T, meta: {} };
+
+	let body: unknown;
+	try {
+		body = await res.json();
+	} catch {
+		throw new ApiError(res.status, 'internal', `${res.status} ${res.statusText}`);
 	}
 
-	if (res.status === 204) return undefined as T;
-	return (await res.json()) as T;
+	if (!res.ok) {
+		const { error, meta } = (body ?? {}) as Partial<import('./types').ErrorEnvelope>;
+		throw new ApiError(
+			res.status,
+			error?.kind ?? 'internal',
+			error?.message ?? `${res.status} ${res.statusText}`,
+			error?.code,
+			error?.fields,
+			meta?.request_id
+		);
+	}
+
+	return body as Envelope<T>;
 }
 
 function queryString(params: Record<string, string | number | undefined>): string {
@@ -57,8 +87,10 @@ function queryString(params: Record<string, string | number | undefined>): strin
 
 export const health = (opts: Options = {}) => request<Health>('/healthz', opts);
 
+export const ping = (opts: Options = {}) => request<Ping>('/api/v1/ping', opts);
+
 export const listDepartments = (opts: Options = {}) =>
-	request<ListResponse<Department>>('/api/v1/departments', opts);
+	request<Department[]>('/api/v1/departments', opts);
 
 export const createDepartment = (name: string, opts: Options = {}) =>
 	request<Department>('/api/v1/departments', {
@@ -78,7 +110,7 @@ export interface ListEmployeesQuery {
 }
 
 export const listEmployees = (query: ListEmployeesQuery = {}, opts: Options = {}) =>
-	request<ListResponse<Employee>>(`/api/v1/employees${queryString({ ...query })}`, opts);
+	request<Employee[]>(`/api/v1/employees${queryString({ ...query })}`, opts);
 
 export const getEmployee = (id: string, opts: Options = {}) =>
 	request<Employee>(`/api/v1/employees/${id}`, opts);

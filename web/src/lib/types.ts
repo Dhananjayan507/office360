@@ -20,15 +20,53 @@ export interface Employee {
 	updated_at: string;
 }
 
-export interface ListResponse<T> {
-	data: T[];
-	total: number;
-	limit: number;
-	offset: number;
+/** Travels with every response. Pagination fields appear only on lists. */
+export interface Meta {
+	request_id?: string;
+	total?: number;
+	limit?: number;
+	offset?: number;
+}
+
+/** Every successful response is `{ data, meta }`. */
+export interface Envelope<T> {
+	data: T;
+	meta: Meta;
+}
+
+/** Mirrors the Kind constants in `api/internal/httpx/errors.go`. */
+export type ErrorKind =
+	| 'validation'
+	| 'unauthenticated'
+	| 'forbidden'
+	| 'not_found'
+	| 'method_not_allowed'
+	| 'conflict'
+	| 'rule_violation'
+	| 'rate_limited'
+	| 'internal';
+
+export interface ErrorPayload {
+	kind: ErrorKind;
+	message: string;
+	/** Stable identifier such as "employee.email_taken". */
+	code?: string;
+	/** Per-field validation messages, keyed by JSON field name. */
+	fields?: Record<string, string>;
+}
+
+export interface ErrorEnvelope {
+	error: ErrorPayload;
+	meta: Meta;
 }
 
 export interface Health {
 	status: string;
 	db: string;
+	env: string;
+}
+
+export interface Ping {
+	message: string;
 	env: string;
 }

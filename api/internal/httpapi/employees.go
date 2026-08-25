@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/Dhananjayan507/office360/api/internal/db"
+	"github.com/Dhananjayan507/office360/api/internal/httpx"
 )
 
 const (
@@ -20,19 +21,20 @@ const (
 
 var employeeStatuses = map[string]bool{"active": true, "on_leave": true, "exited": true}
 
-func (s *Server) listEmployees(w http.ResponseWriter, r *http.Request) {
+const statusMessage = "status must be one of: active, on_leave, exited"
+
+func (s *Server) listEmployees(w http.ResponseWriter, r *http.Request) error {
 	q := r.URL.Query()
 
-	departmentID, ok := optionalUUIDParam(w, q.Get("department_id"), "department_id")
-	if !ok {
-		return
+	departmentID, err := optionalUUIDParam(q.Get("department_id"), "department_id")
+	if err != nil {
+		return err
 	}
 
 	var status *string
 	if raw := strings.TrimSpace(q.Get("status")); raw != "" {
 		if !employeeStatuses[raw] {
-			writeError(w, http.StatusBadRequest, "status must be one of: active, on_leave, exited")
-			return
+			return httpx.Validation(statusMessage, map[string]string{"status": "invalid value"})
 		}
 		status = &raw
 	}
@@ -47,8 +49,7 @@ func (s *Server) listEmployees(w http.ResponseWriter, r *http.Request) {
 		Offset:       offset,
 	})
 	if err != nil {
-		writeInternal(w, "list employees", err)
-		return
+		return httpx.Internal(err)
 	}
 
 	total, err := s.q.CountEmployees(r.Context(), db.CountEmployeesParams{
@@ -56,30 +57,27 @@ func (s *Server) listEmployees(w http.ResponseWriter, r *http.Request) {
 		Status:       status,
 	})
 	if err != nil {
-		writeInternal(w, "count employees", err)
-		return
+		return httpx.Internal(err)
 	}
 
-	writeJSON(w, http.StatusOK, listBody[db.Employee]{Data: rows, Total: total, Limit: limit, Offset: offset})
+	return httpx.OK(w, r, rows, httpx.Page(total, limit, offset))
 }
 
-func (s *Server) getEmployee(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathUUID(w, r)
-	if !ok {
-		return
+func (s *Server) getEmployee(w http.ResponseWriter, r *http.Request) error {
+	id, err := pathUUID(r)
+	if err != nil {
+		return err
 	}
 
 	employee, err := s.q.GetEmployee(r.Context(), id)
 	if errors.Is(err, pgx.ErrNoRows) {
-		writeError(w, http.StatusNotFound, "employee not found")
-		return
+		return httpx.NotFound("employee not found")
 	}
 	if err != nil {
-		writeInternal(w, "get employee", err)
-		return
+		return httpx.Internal(err)
 	}
 
-	writeJSON(w, http.StatusOK, employee)
+	return httpx.OK(w, r, employee, nil)
 }
 
 type createEmployeeRequest struct {
@@ -91,25 +89,27 @@ type createEmployeeRequest struct {
 	HiredOn      *jsonDate  `json:"hired_on"`
 }
 
-func (s *Server) createEmployee(w http.ResponseWriter, r *http.Request) {
+func (s *Server) createEmployee(w http.ResponseWriter, r *http.Request) error {
 	var body createEmployeeRequest
-	if !decodeJSON(w, r, &body) {
-		return
+	if err := httpx.Decode(w, r, &body); err != nil {
+		return err
 	}
 
 	body.FullName = strings.TrimSpace(body.FullName)
 	body.Email = strings.TrimSpace(body.Email)
 
+	fields := map[string]string{}
 	if body.FullName == "" {
-		writeError(w, http.StatusBadRequest, "full_name is required")
-		return
+		fields["full_name"] = "required"
 	}
 	if body.Email == "" {
-		writeError(w, http.StatusBadRequest, "email is required")
-		return
+		fields["email"] = "required"
 	}
-	if !validStatus(w, body.Status) {
-		return
+	if body.Status != nil && !employeeStatuses[*body.Status] {
+		fields["status"] = "invalid value"
+	}
+	if len(fields) > 0 {
+		return httpx.Validation("the employee could not be created", fields)
 	}
 
 	employee, err := s.q.CreateEmployee(r.Context(), db.CreateEmployeeParams{
@@ -120,15 +120,14 @@ func (s *Server) createEmployee(w http.ResponseWriter, r *http.Request) {
 		Status:       body.Status,
 		HiredOn:      body.HiredOn.timePtr(),
 	})
-	if handled := s.writeConstraintError(w, err); handled {
-		return
-	}
 	if err != nil {
-		writeInternal(w, "create employee", err)
-		return
+		if ce := constraintError(err); ce != nil {
+			return ce
+		}
+		return httpx.Internal(err)
 	}
 
-	writeJSON(w, http.StatusCreated, employee)
+	return httpx.Created(w, r, employee)
 }
 
 type updateEmployeeRequest struct {
@@ -140,18 +139,18 @@ type updateEmployeeRequest struct {
 	HiredOn      *jsonDate  `json:"hired_on"`
 }
 
-func (s *Server) updateEmployee(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathUUID(w, r)
-	if !ok {
-		return
+func (s *Server) updateEmployee(w http.ResponseWriter, r *http.Request) error {
+	id, err := pathUUID(r)
+	if err != nil {
+		return err
 	}
 
 	var body updateEmployeeRequest
-	if !decodeJSON(w, r, &body) {
-		return
+	if err := httpx.Decode(w, r, &body); err != nil {
+		return err
 	}
-	if !validStatus(w, body.Status) {
-		return
+	if body.Status != nil && !employeeStatuses[*body.Status] {
+		return httpx.Validation(statusMessage, map[string]string{"status": "invalid value"})
 	}
 
 	employee, err := s.q.UpdateEmployee(r.Context(), db.UpdateEmployeeParams{
@@ -163,83 +162,73 @@ func (s *Server) updateEmployee(w http.ResponseWriter, r *http.Request) {
 		Status:       body.Status,
 		HiredOn:      body.HiredOn.timePtr(),
 	})
+	// Order matters: a missing id is a 404, even though a bad payload on the
+	// same request would be a 400.
 	if errors.Is(err, pgx.ErrNoRows) {
-		writeError(w, http.StatusNotFound, "employee not found")
-		return
-	}
-	if handled := s.writeConstraintError(w, err); handled {
-		return
+		return httpx.NotFound("employee not found")
 	}
 	if err != nil {
-		writeInternal(w, "update employee", err)
-		return
+		if ce := constraintError(err); ce != nil {
+			return ce
+		}
+		return httpx.Internal(err)
 	}
 
-	writeJSON(w, http.StatusOK, employee)
+	return httpx.OK(w, r, employee, nil)
 }
 
-func (s *Server) deleteEmployee(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathUUID(w, r)
-	if !ok {
-		return
+func (s *Server) deleteEmployee(w http.ResponseWriter, r *http.Request) error {
+	id, err := pathUUID(r)
+	if err != nil {
+		return err
 	}
 
 	rows, err := s.q.DeleteEmployee(r.Context(), id)
 	if err != nil {
-		writeInternal(w, "delete employee", err)
-		return
+		return httpx.Internal(err)
 	}
 	if rows == 0 {
-		writeError(w, http.StatusNotFound, "employee not found")
-		return
+		return httpx.NotFound("employee not found")
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	return httpx.NoContent(w, r)
 }
 
-// writeConstraintError maps the Postgres constraint violations these handlers
-// can legitimately hit onto 4xx responses. It reports whether it wrote a response.
-func (s *Server) writeConstraintError(w http.ResponseWriter, err error) bool {
+// constraintError translates the Postgres constraint violations these handlers
+// can legitimately hit into typed errors. It returns nil for anything else, so
+// the caller falls through to Internal.
+func constraintError(err error) error {
 	switch pgCode(err) {
 	case "23505": // unique_violation
-		writeError(w, http.StatusConflict, "an employee with that email already exists")
+		return httpx.Conflict("an employee with that email already exists").
+			WithCode("employee.email_taken")
 	case "23503": // foreign_key_violation
-		writeError(w, http.StatusBadRequest, "department_id does not reference an existing department")
+		return httpx.Validation("the employee could not be saved",
+			map[string]string{"department_id": "no such department"})
 	case "23514": // check_violation
-		writeError(w, http.StatusBadRequest, "status must be one of: active, on_leave, exited")
+		return httpx.Validation(statusMessage, map[string]string{"status": "invalid value"})
 	default:
-		return false
+		return nil
 	}
-	return true
 }
 
-func validStatus(w http.ResponseWriter, status *string) bool {
-	if status != nil && !employeeStatuses[*status] {
-		writeError(w, http.StatusBadRequest, "status must be one of: active, on_leave, exited")
-		return false
-	}
-	return true
-}
-
-func pathUUID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
+func pathUUID(r *http.Request) (uuid.UUID, error) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "id must be a UUID")
-		return uuid.Nil, false
+		return uuid.Nil, httpx.Validation("id must be a UUID", map[string]string{"id": "not a UUID"})
 	}
-	return id, true
+	return id, nil
 }
 
-func optionalUUIDParam(w http.ResponseWriter, raw, name string) (*uuid.UUID, bool) {
+func optionalUUIDParam(raw, name string) (*uuid.UUID, error) {
 	if raw = strings.TrimSpace(raw); raw == "" {
-		return nil, true
+		return nil, nil
 	}
 	id, err := uuid.Parse(raw)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, name+" must be a UUID")
-		return nil, false
+		return nil, httpx.Validation(name+" must be a UUID", map[string]string{name: "not a UUID"})
 	}
-	return &id, true
+	return &id, nil
 }
 
 // intParam clamps rather than rejects, so a stray ?limit=9999 still returns a page.

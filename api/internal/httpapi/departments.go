@@ -4,67 +4,59 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Dhananjayan507/office360/api/internal/db"
+	"github.com/Dhananjayan507/office360/api/internal/httpx"
 )
 
-func (s *Server) listDepartments(w http.ResponseWriter, r *http.Request) {
+func (s *Server) listDepartments(w http.ResponseWriter, r *http.Request) error {
 	rows, err := s.q.ListDepartments(r.Context())
 	if err != nil {
-		writeInternal(w, "list departments", err)
-		return
+		return httpx.Internal(err)
 	}
 
-	writeJSON(w, http.StatusOK, listBody[db.Department]{
-		Data:  rows,
-		Total: int64(len(rows)),
-		Limit: int32(len(rows)),
-	})
+	total := int64(len(rows))
+	return httpx.OK(w, r, rows, httpx.Page(total, int32(total), 0))
 }
 
 type createDepartmentRequest struct {
 	Name string `json:"name"`
 }
 
-func (s *Server) createDepartment(w http.ResponseWriter, r *http.Request) {
+func (s *Server) createDepartment(w http.ResponseWriter, r *http.Request) error {
 	var body createDepartmentRequest
-	if !decodeJSON(w, r, &body) {
-		return
+	if err := httpx.Decode(w, r, &body); err != nil {
+		return err
 	}
 
 	body.Name = strings.TrimSpace(body.Name)
 	if body.Name == "" {
-		writeError(w, http.StatusBadRequest, "name is required")
-		return
+		return httpx.Validation("name is required", map[string]string{"name": "required"})
 	}
 
 	department, err := s.q.CreateDepartment(r.Context(), body.Name)
 	if pgCode(err) == "23505" {
-		writeError(w, http.StatusConflict, "a department with that name already exists")
-		return
+		return httpx.Conflict("a department with that name already exists").
+			WithCode("department.name_taken")
 	}
 	if err != nil {
-		writeInternal(w, "create department", err)
-		return
+		return httpx.Internal(err)
 	}
 
-	writeJSON(w, http.StatusCreated, department)
+	return httpx.Created(w, r, department)
 }
 
-func (s *Server) deleteDepartment(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathUUID(w, r)
-	if !ok {
-		return
+func (s *Server) deleteDepartment(w http.ResponseWriter, r *http.Request) error {
+	id, err := pathUUID(r)
+	if err != nil {
+		return err
 	}
 
 	rows, err := s.q.DeleteDepartment(r.Context(), id)
 	if err != nil {
-		writeInternal(w, "delete department", err)
-		return
+		return httpx.Internal(err)
 	}
 	if rows == 0 {
-		writeError(w, http.StatusNotFound, "department not found")
-		return
+		return httpx.NotFound("department not found")
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	return httpx.NoContent(w, r)
 }
