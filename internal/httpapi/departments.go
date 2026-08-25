@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Dhananjayan507/office360/api/internal/httpx"
+	"github.com/Dhananjayan507/office360/internal/httpx"
 )
 
 func (s *Server) listDepartments(w http.ResponseWriter, r *http.Request) error {

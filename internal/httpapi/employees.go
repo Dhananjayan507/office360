@@ -10,8 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/Dhananjayan507/office360/api/internal/db"
-	"github.com/Dhananjayan507/office360/api/internal/httpx"
+	"github.com/Dhananjayan507/office360/internal/db"
+	"github.com/Dhananjayan507/office360/internal/httpx"
 )
 
 const (

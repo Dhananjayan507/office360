@@ -14,8 +14,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/Dhananjayan507/office360/api/internal/config"
-	"github.com/Dhananjayan507/office360/api/internal/httpapi"
+	"github.com/Dhananjayan507/office360/internal/config"
+	"github.com/Dhananjayan507/office360/internal/httpapi"
 )
 
 func main() {

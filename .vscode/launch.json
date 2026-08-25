@@ -6,8 +6,18 @@
       "type": "go",
       "request": "launch",
       "mode": "debug",
-      "program": "${workspaceFolder}/api/cmd/server",
-      "cwd": "${workspaceFolder}/api",
+      "program": "${workspaceFolder}/cmd/server",
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Migrate up",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/migrate",
+      "cwd": "${workspaceFolder}",
+      "args": ["up"],
       "envFile": "${workspaceFolder}/.env"
     }
   ]

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Dhananjayan507/office360/api/internal/httpx"
+	"github.com/Dhananjayan507/office360/internal/httpx"
 )
 
 type healthBody struct {

@@ -73,23 +73,25 @@ switch ($Task) {
     }
 
     'migrate' {
-        migrate -path api/db/migrations -database $env:DATABASE_URL up
-        Assert-LastExit 'migrate up'
+        # Uses ./cmd/migrate rather than the golang-migrate CLI, so a bare
+        # checkout needs nothing on PATH beyond Go itself.
+        Push-Location $Root
+        try { go run ./cmd/migrate up; Assert-LastExit 'migrate up' } finally { Pop-Location }
     }
 
     'rollback' {
-        migrate -path api/db/migrations -database $env:DATABASE_URL down 1
-        Assert-LastExit 'migrate down'
+        Push-Location $Root
+        try { go run ./cmd/migrate down 1; Assert-LastExit 'migrate down' } finally { Pop-Location }
     }
 
     'sqlc' {
-        Push-Location (Join-Path $Root 'api')
+        Push-Location $Root
         try { sqlc generate; Assert-LastExit 'sqlc generate' } finally { Pop-Location }
-        Write-Host 'Regenerated api/internal/db' -ForegroundColor Green
+        Write-Host 'Regenerated internal/db' -ForegroundColor Green
     }
 
     'api' {
-        Push-Location (Join-Path $Root 'api')
+        Push-Location $Root
         try { go run ./cmd/server } finally { Pop-Location }
     }
 
@@ -99,7 +101,7 @@ switch ($Task) {
     }
 
     'check' {
-        Push-Location (Join-Path $Root 'api')
+        Push-Location $Root
         try {
             go build ./...; Assert-LastExit 'go build'
             go vet ./...; Assert-LastExit 'go vet'
