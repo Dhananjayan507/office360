@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Starting Docker and Postgres for office360 by hand.">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+img,svg,video{max-width:100%;height:auto}
+pre{overflow-x:auto}
+table{border-collapse:collapse}
+</style><title>office360 Database Runbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;1,400&display=swap">
+
+<style>
+:root{
+  --paper:#f4f7f8; --surface:#fff; --surface-2:#eaf1f3;
+  --ink:#0f171c; --ink-2:#33454f; --muted:#63767f;
+  --rule:#d6e1e5; --rule-2:#c2d2d8;
+  --accent:#0b6e7f; --accent-ink:#075462; --accent-soft:#dbedf0;
+  --danger:#9a3a26; --danger-soft:#f8e7e2;
+  --ok:#2c6b4f; --ok-soft:#dfeee7;
+  --code-bg:#eff5f6;
+  --shadow:0 1px 2px rgba(15,23,28,.05), 0 10px 26px -20px rgba(15,23,28,.5);
+  --sans:"IBM Plex Sans",ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  --serif:"IBM Plex Serif",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0d1216; --surface:#151d22; --surface-2:#1c262c;
+    --ink:#e4ecef; --ink-2:#bacad1; --muted:#8a9ea7;
+    --rule:#24323a; --rule-2:#31434c;
+    --accent:#57c2d3; --accent-ink:#8ad9e6; --accent-soft:#10303a;
+    --danger:#e08d75; --danger-soft:#331f19;
+    --ok:#6bc59b; --ok-soft:#14291f;
+    --code-bg:#101a1f;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 26px -20px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0d1216; --surface:#151d22; --surface-2:#1c262c;
+  --ink:#e4ecef; --ink-2:#bacad1; --muted:#8a9ea7;
+  --rule:#24323a; --rule-2:#31434c;
+  --accent:#57c2d3; --accent-ink:#8ad9e6; --accent-soft:#10303a;
+  --danger:#e08d75; --danger-soft:#331f19;
+  --ok:#6bc59b; --ok-soft:#14291f;
+  --code-bg:#101a1f;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 26px -20px rgba(0,0,0,.9);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--serif);font-size:16.5px;line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:54rem;margin:0 auto;padding:0 1.5rem 5rem}
+p,li{max-width:66ch}
+a{color:var(--accent-ink);text-underline-offset:2px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
+
+.mast{padding:3.5rem 0 2rem;border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:var(--mono);font-size:.68rem;font-weight:600;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--accent-ink);margin:0 0 .9rem}
+h1{font-family:var(--sans);font-weight:700;font-size:clamp(1.9rem,4.6vw,2.8rem);
+  line-height:1.06;letter-spacing:-.028em;margin:0 0 .8rem;text-wrap:balance}
+.standfirst{font-size:1.08rem;color:var(--ink-2);margin:0;max-width:58ch}
+
+h2{font-family:var(--sans);font-weight:600;font-size:1.4rem;letter-spacing:-.02em;
+  line-height:1.2;margin:0 0 .45rem;text-wrap:balance}
+h3{font-family:var(--sans);font-weight:600;font-size:.98rem;margin:1.9rem 0 .5rem}
+.lede{color:var(--ink-2);margin:0 0 1.3rem}
+section{margin-top:3rem}
+
+.step{position:relative;padding-left:3.9rem;margin-top:2.9rem}
+.step::before{content:"";position:absolute;left:1.27rem;top:2.75rem;bottom:-2.9rem;
+  width:1px;background:var(--rule-2)}
+.step.last::before{display:none}
+.num{position:absolute;left:0;top:0;width:2.55rem;height:2.55rem;display:grid;place-items:center;
+  border-radius:50%;background:var(--surface);border:1px solid var(--rule-2);
+  color:var(--accent-ink);font-family:var(--mono);font-weight:600;font-size:.9rem;
+  font-variant-numeric:tabular-nums;z-index:1}
+@media (max-width:640px){.step{padding-left:0}.step::before{display:none}.num{position:static;margin-bottom:.8rem}}
+
+figure.code{margin:1.15rem 0;background:var(--surface);border:1px solid var(--rule);
+  border-radius:4px;overflow:hidden;box-shadow:var(--shadow)}
+figure.code figcaption{display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  padding:.5rem .8rem;background:var(--surface-2);border-bottom:1px solid var(--rule);
+  font-family:var(--mono);font-size:.72rem}
+figcaption .path{color:var(--ink-2);font-weight:600;overflow-wrap:anywhere}
+figcaption .path::before{content:"› ";color:var(--accent)}
+figcaption .tag{flex:none;color:var(--muted);font-size:.64rem;letter-spacing:.08em;text-transform:uppercase}
+figure.code pre{margin:0;padding:.85rem .95rem;overflow-x:auto;background:var(--code-bg);
+  font-family:var(--mono);font-size:.78rem;line-height:1.58;color:var(--ink);tab-size:2}
+code{font-family:var(--mono);font-size:.86em}
+p code,li code,td code{background:var(--accent-soft);padding:.08em .34em;border-radius:2px;
+  color:var(--accent-ink);font-size:.82em}
+
+aside.note{margin:1.2rem 0;padding:.85rem 1rem;border-left:3px solid var(--accent);
+  background:var(--accent-soft);border-radius:0 3px 3px 0;font-size:.9rem;color:var(--ink-2)}
+aside.note p{margin:0;max-width:62ch}
+aside.note p + p{margin-top:.55rem}
+aside.note strong{color:var(--ink);font-family:var(--sans);font-weight:600;font-size:.94em}
+aside.note.warn{border-left-color:var(--danger);background:var(--danger-soft)}
+aside.note.ok{border-left-color:var(--ok);background:var(--ok-soft)}
+
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:4px;
+  box-shadow:var(--shadow);padding:.2rem 1.2rem;margin:1.5rem 0}
+dl.conn{display:grid;grid-template-columns:auto 1fr;gap:.05rem 1.5rem;margin:1rem 0;
+  font-size:.88rem;align-items:baseline}
+dl.conn dt{font-family:var(--sans);font-weight:600;color:var(--muted);font-size:.74rem;
+  letter-spacing:.05em;text-transform:uppercase;padding:.32rem 0}
+dl.conn dd{margin:0;padding:.32rem 0;font-family:var(--mono);font-size:.82rem;
+  color:var(--ink);overflow-wrap:anywhere}
+@media (max-width:520px){dl.conn{grid-template-columns:1fr;gap:0}dl.conn dt{padding-bottom:0}}
+
+.tbl{overflow-x:auto;margin:1.4rem 0;border:1px solid var(--rule);border-radius:4px;
+  background:var(--surface);box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-family:var(--sans);font-size:.85rem}
+th{text-align:left;font-weight:600;font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);background:var(--surface-2);padding:.55rem .8rem;
+  border-bottom:1px solid var(--rule);white-space:nowrap}
+td{padding:.58rem .8rem;border-bottom:1px solid var(--rule);color:var(--ink-2);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+td:first-child{color:var(--ink);font-weight:500}
+hr.rule{border:none;border-top:1px solid var(--rule);margin:3rem 0 0}
+.foot{margin-top:2rem;font-size:.83rem;color:var(--muted);font-family:var(--sans)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">Companion to the build manual</p>
+  <h1>Starting the database by hand</h1>
+  <p class="standfirst">The build manual ends with a folder full of code. This one covers what you do every day after that: bringing Docker and Postgres up, applying the schema, proving the connection works, and pointing a GUI client at it.</p>
+</header>
+
+<section>
+  <h2>Your connection details</h2>
+  <p class="lede">These are the live values for office360, taken from the root <code>.env</code>. Every tool below wants some subset of them.</p>
+  <div class="card">
+    <dl class="conn">
+      <dt>Host</dt><dd>localhost</dd>
+      <dt>Port</dt><dd>5434</dd>
+      <dt>Database</dt><dd>office360</dd>
+      <dt>User</dt><dd>office360</dd>
+      <dt>Password</dt><dd>office360_dev</dd>
+      <dt>SSL</dt><dd>disable</dd>
+      <dt>URL</dt><dd>postgres://office360:office360_dev@localhost:5434/office360?sslmode=disable</dd>
+      <dt>Container</dt><dd>office360-postgres</dd>
+      <dt>Volume</dt><dd>office360_office360_pgdata</dd>
+    </dl>
+  </div>
+  <aside class="note">
+    <p><strong>Port 5434 is not the Postgres default, and that is deliberate.</strong> On this machine 5432 belongs to a Postgres running directly on Windows, and 5433 belongs to the ebike stack's container. A second service cannot bind a port that is already taken, so office360 claims the next free one. Check before you assume — see step 1.</p>
+  </aside>
+</section>
+
+<hr class="rule">
+
+<!-- 1 -->
+<section class="step">
+  <div class="num">1</div>
+  <h2>Start Docker, and check the port</h2>
+
+  <p>Launch Docker Desktop from the Start menu and wait for the whale icon in the system tray to stop animating. Then confirm the daemon is actually accepting commands:</p>
+
+  <figure class="code"><figcaption><span class="path">PowerShell</span></figcaption><pre><code>docker version --format "server {{.Server.Version}}"</code></pre></figure>
+
+  <p>An error mentioning <code>dockerDesktopLinuxEngine</code> means the daemon is still starting — wait and retry. Now check nothing already owns your port:</p>
+
+  <figure class="code"><figcaption><span class="path">PowerShell</span></figcaption><pre><code>Test-NetConnection localhost -Port 5434 -WarningAction SilentlyContinue |
+  Select-Object -ExpandProperty TcpTestSucceeded</code></pre></figure>
+
+  <p><code>False</code> is what you want — the port is free. If it returns <code>True</code>, something is already there. Find out what:</p>
+
+  <figure class="code"><figcaption><span class="path">PowerShell</span></figcaption><pre><code>docker ps --format "{{.Names}}  |  {{.Ports}}"</code></pre></figure>
+
+  <aside class="note warn">
+    <p><strong>Skipping this check costs an hour.</strong> Docker reports a port clash as <em>bind: address already in use</em>, which reads like a Docker fault rather than "another project already has that port". If it happens, pick a free port and change it in three places: <code>POSTGRES_PORT</code>, the host half of <code>DATABASE_URL</code>, and the default in <code>docker-compose.yml</code>.</p>
+  </aside>
+</section>
+
+<!-- 2 -->
+<section class="step">
+  <div class="num">2</div>
+  <h2>Bring Postgres up</h2>
+
+  <figure class="code"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>docker compose up -d</code></pre></figure>
+
+  <p>Compose creates a network, a volume, and the container. It returns immediately — but Postgres is <em>not</em> ready yet. It needs several more seconds to initialise before it accepts connections. Watch for it:</p>
+
+  <figure class="code"><figcaption><span class="path">PowerShell</span></figcaption><pre><code>docker inspect -f '{{.State.Health.Status}}' office360-postgres</code></pre></figure>
+
+  <p>Run it until it prints <code>healthy</code>. It will say <code>starting</code> first. Or skip both commands and let the task runner poll for you:</p>
+
+  <figure class="code"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>./make.ps1 up</code></pre></figure>
+
+  <aside class="note">
+    <p><strong>This is why the next step fails intermittently if you rush.</strong> Running migrations against a container that is up but not yet accepting connections produces a confusing connection-refused error. Waiting on the health status rather than guessing a sleep duration removes the race entirely.</p>
+  </aside>
+</section>
+
+<!-- 3 -->
+<section class="step">
+  <div class="num">3</div>
+  <h2>Apply the schema</h2>
+
+  <p>A fresh container has an empty database. The tables come from the migration files:</p>
+
+  <figure class="code"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>./make.ps1 migrate</code></pre></figure>
+
+  <p>Or the underlying command, if you would rather see it:</p>
+
+  <figure class="code"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>migrate -path api/db/migrations -database $env:DATABASE_URL up</code></pre></figure>
+
+  <p>Success prints something like <code>1/u init (121ms)</code>. Confirm the tables landed:</p>
+
+  <figure class="code"><figcaption><span class="path">PowerShell</span></figcaption><pre><code>docker exec office360-postgres psql -U office360 -d office360 -c "\dt"</code></pre></figure>
+
+  <aside class="note ok">
+    <p><strong>Expect three tables:</strong> <code>departments</code>, <code>employees</code>, and <code>schema_migrations</code>. The third is golang-migrate's own bookkeeping — it records which version has been applied, which is how re-running <code>migrate up</code> is safe and does nothing the second time.</p>
+  </aside>
+</section>
+
+<!-- 4 -->
+<section class="step last">
+  <div class="num">4</div>
+  <h2>Prove the connection works</h2>
+
+  <p>Three checks, cheapest first. A psql shell straight inside the container:</p>
+
+  <figure class="code"><figcaption><span class="path">PowerShell</span></figcaption><pre><code>docker exec -it office360-postgres psql -U office360 -d office360</code></pre></figure>
+
+  <p>Type <code>\dt</code> to list tables, <code>\q</code> to quit. That proves Postgres itself is fine. Next, prove the <em>API</em> can reach it — start the server in one terminal:</p>
+
+  <figure class="code"><figcaption><span class="path">Terminal 1 · repo root</span></figcaption><pre><code>./make.ps1 api</code></pre></figure>
+
+  <figure class="code"><figcaption><span class="path">Terminal 2</span></figcaption><pre><code>curl http://localhost:8080/healthz</code></pre></figure>
+
+  <aside class="note ok">
+    <p><strong>A healthy response is</strong> <code>{"status":"ok","db":"up","env":"development"}</code>. If <code>db</code> reads <code>down</code>, the API is running but cannot reach Postgres — check the port in <code>.env</code> against what <code>docker ps</code> reports.</p>
+    <p>The server pings the database at boot and refuses to start if it cannot connect, so reaching the <code>listening</code> log line already tells you the connection is good.</p>
+  </aside>
+
+  <p>Finally, a full round trip through the API to the database and back:</p>
+
+  <figure class="code"><figcaption><span class="path">Terminal 2</span></figcaption><pre><code>curl -X POST http://localhost:8080/api/v1/employees -H "Content-Type: application/json" -d "{\"full_name\":\"Ada Lovelace\",\"email\":\"ada@office360.dev\"}"</code></pre></figure>
+
+  <p>You get 201 and a generated UUID. Run it a second time and you should get <code>409</code> with a duplicate-email message — which confirms the unique index is enforced and the error mapping is wired correctly.</p>
+</section>
+
+<hr class="rule">
+
+<section>
+  <h2>Connecting a GUI client</h2>
+  <p class="lede">DBeaver, pgAdmin, TablePlus, and the SQLTools extension in VS Code all want the same five fields.</p>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Field</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Host</td><td><code>localhost</code></td></tr>
+        <tr><td>Port</td><td><code>5434</code> — not 5432</td></tr>
+        <tr><td>Database</td><td><code>office360</code></td></tr>
+        <tr><td>Username</td><td><code>office360</code></td></tr>
+        <tr><td>Password</td><td><code>office360_dev</code></td></tr>
+        <tr><td>SSL mode</td><td><code>disable</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <aside class="note">
+    <p><strong>The port is where this goes wrong.</strong> Every client defaults to 5432, and on this machine 5432 is a different Postgres entirely — so leaving the default gives you a successful connection to the wrong database, with none of your tables in it. If a client connects but shows nothing familiar, check the port before anything else.</p>
+  </aside>
+</section>
+
+<section>
+  <h2>Everyday commands</h2>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Task</th><th>Command</th></tr></thead>
+      <tbody>
+        <tr><td>Start</td><td><code>./make.ps1 up</code></td></tr>
+        <tr><td>Stop (keeps data)</td><td><code>./make.ps1 down</code></td></tr>
+        <tr><td>Apply migrations</td><td><code>./make.ps1 migrate</code></td></tr>
+        <tr><td>Undo last migration</td><td><code>./make.ps1 rollback</code></td></tr>
+        <tr><td>psql shell</td><td><code>./make.ps1 psql</code></td></tr>
+        <tr><td>Watch the logs</td><td><code>docker compose logs -f postgres</code></td></tr>
+        <tr><td>Is it running?</td><td><code>docker ps</code></td></tr>
+        <tr><td>Wipe everything</td><td><code>./make.ps1 nuke</code> — destroys the volume</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <aside class="note warn">
+    <p><strong><code>down</code> and <code>nuke</code> are not the same.</strong> <code>down</code> removes the container but leaves the volume, so your data comes back when you start again. <code>nuke</code> — and its underlying <code>docker compose down -v</code> — deletes the volume permanently. After a nuke you must re-run <code>migrate</code>, because the database is genuinely empty again.</p>
+    <p>Restarting Docker Desktop or rebooting stops the container but never touches the volume. Just run <code>./make.ps1 up</code> again; your data is still there.</p>
+  </aside>
+</section>
+
+<section>
+  <h2>When it will not connect</h2>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Symptom</th><th>Cause and fix</th></tr></thead>
+      <tbody>
+        <tr><td>failed to connect to the docker API</td><td>Docker Desktop is not running. Start it and wait for the tray icon to settle.</td></tr>
+        <tr><td>bind: address already in use</td><td>Another service owns the port. <code>docker ps</code> to find it, then pick a free port and change it in all three places.</td></tr>
+        <tr><td>connection refused, right after <code>up</code></td><td>Container is up but Postgres is still initialising. Wait for <code>healthy</code>.</td></tr>
+        <tr><td>API exits at startup</td><td>It pings at boot by design. Either the container is down or <code>DATABASE_URL</code> is wrong.</td></tr>
+        <tr><td><code>healthz</code> says <code>"db":"down"</code></td><td>API is up, Postgres is not reachable. Compare the port in <code>.env</code> with <code>docker ps</code>.</td></tr>
+        <tr><td>relation "employees" does not exist</td><td>Migrations never ran on this volume. <code>./make.ps1 migrate</code>.</td></tr>
+        <tr><td>GUI connects but tables are missing</td><td>You are on 5432 — a different Postgres. Change the port to 5434.</td></tr>
+        <tr><td>password authentication failed</td><td><code>.env</code> and the volume disagree. Credentials are baked in at volume creation, so changing the password later needs a <code>nuke</code>.</td></tr>
+        <tr><td>All data vanished</td><td>Something ran <code>down -v</code> or <code>nuke</code>. Re-run <code>migrate</code>.</td></tr>
+        <tr><td><code>make.ps1</code> parse errors</td><td>A non-ASCII character crept into the script. PowerShell 5.1 reads <code>.ps1</code> as Windows-1252, and a UTF-8 em dash decodes into a smart quote that breaks every string after it. Keep the file pure ASCII.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="foot">Every command here was run against this project on 25 August 2026 — container healthy on 5434, migration <code>1/u init</code> applied, <code>/healthz</code> returning <code>db: up</code>, and the duplicate-email 409 confirmed.</p>
+</section>
+
+</div>
+</body>
+</html>

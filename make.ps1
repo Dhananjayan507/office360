@@ -28,7 +28,10 @@ $Root = $PSScriptRoot
 function Import-DotEnv {
     $envFile = Join-Path $Root '.env'
     if (-not (Test-Path $envFile)) {
-        Write-Warning ".env not found — copying from .env.example"
+        # Keep this file pure ASCII: PowerShell 5.1 reads .ps1 as Windows-1252
+        # unless there is a BOM, and a UTF-8 em dash decodes into a smart quote
+        # that silently unbalances every string after it.
+        Write-Warning ".env not found - copying from .env.example"
         Copy-Item (Join-Path $Root '.env.example') $envFile
     }
     Get-Content $envFile | ForEach-Object {

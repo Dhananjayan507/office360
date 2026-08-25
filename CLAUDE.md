@@ -90,9 +90,9 @@ repo root or `api/`). The web side reads it because `vite.config.ts` sets
 
 ## Gotchas
 
-- **Postgres binds host port 5433, not 5432.** Deliberate: Docker Desktop on this
-  machine is shared with the ebike project, whose Postgres owns 5432. Do not
-  "fix" this back to 5432.
+- **Postgres binds host port 5434, not 5432.** Deliberate: Docker Desktop on this
+  machine is shared with the ebike stack, whose container owns 5433, and a host
+  Postgres already holds 5432. Do not "fix" this back to a lower port.
 - `api/internal/db/` is generated. Editing it works until the next
   `./make.ps1 sqlc` silently reverts you.
 - `./make.ps1 nuke` and `docker compose down -v` destroy the local volume.

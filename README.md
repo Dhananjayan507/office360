@@ -68,8 +68,9 @@ And the web app in a second terminal:
 
 API on <http://localhost:8080>, web on <http://localhost:5173>.
 
-> Postgres binds host port **5433**, not 5432, so this stack coexists with other
-> local Postgres containers. Change `POSTGRES_PORT` in `.env` if you prefer.
+> Postgres binds host port **5434**, not 5432, so this stack coexists with the
+> other Postgres instances on this machine. Change `POSTGRES_PORT` in `.env` if
+> you prefer.
 
 ## Tasks
 
