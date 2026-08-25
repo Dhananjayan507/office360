@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<meta name="description" content="Changes made to bring office360 up to the 14-day plan Day 1 spec.">
 <style>
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -178,9 +177,9 @@ hr.rule{border:none;border-top:1px solid var(--rule);margin:3rem 0 0}
 
   <p>The plan's rule is one sentence: <em>handlers must never build status codes directly — they return a typed error and httpx maps it.</em> That exists so one kind of failure cannot be a 400 in one module and a 422 in another.</p>
 
-  <p>Create <code>api/internal/httpx/errors.go</code>. The heart of it is the kind list and the single map:</p>
+  <p>Create <code>internal/httpx/errors.go</code>. The heart of it is the kind list and the single map:</p>
 
-  <figure class="code"><figcaption><span class="path">api/internal/httpx/errors.go</span><span class="tag new">new file</span></figcaption><pre><code>type Kind string
+  <figure class="code"><figcaption><span class="path">internal/httpx/errors.go</span><span class="tag new">new file</span></figcaption><pre><code>type Kind string
 
 const (
 	KindValidation       Kind = "validation"
@@ -217,7 +216,7 @@ func (k Kind) Status() int {
 
   <p>Then the error type itself. <code>cause</code> is unexported deliberately — it reaches the logs and never the client:</p>
 
-  <figure class="code"><figcaption><span class="path">api/internal/httpx/errors.go</span><span class="tag">continued</span></figcaption><pre><code>type Error struct {
+  <figure class="code"><figcaption><span class="path">internal/httpx/errors.go</span><span class="tag">continued</span></figcaption><pre><code>type Error struct {
 	Kind    Kind
 	Message string
 	// Code is a stable machine-readable identifier such as
@@ -264,7 +263,7 @@ func AsError(err error) *Error {
 
   <p>Go handlers have a fixed signature that returns nothing, so "return a typed error" needs an adapter. That is what makes the rule enforceable rather than a convention people forget.</p>
 
-  <figure class="code"><figcaption><span class="path">api/internal/httpx/respond.go</span><span class="tag new">new file</span></figcaption><pre><code>// HandlerFunc is a handler that returns an error instead of writing one.
+  <figure class="code"><figcaption><span class="path">internal/httpx/respond.go</span><span class="tag new">new file</span></figcaption><pre><code>// HandlerFunc is a handler that returns an error instead of writing one.
 type HandlerFunc func(http.ResponseWriter, *http.Request) error
 
 // Handle turns a HandlerFunc into an http.HandlerFunc, routing any returned
@@ -279,7 +278,7 @@ func Handle(h HandlerFunc) http.HandlerFunc {
 
   <p>The envelopes. <code>Meta</code> always carries the request id; the pagination fields appear only on lists:</p>
 
-  <figure class="code"><figcaption><span class="path">api/internal/httpx/respond.go</span><span class="tag">continued</span></figcaption><pre><code>type Meta struct {
+  <figure class="code"><figcaption><span class="path">internal/httpx/respond.go</span><span class="tag">continued</span></figcaption><pre><code>type Meta struct {
 	RequestID string `json:"request_id,omitempty"`
 	Total     *int64 `json:"total,omitempty"`
 	Limit     *int32 `json:"limit,omitempty"`
@@ -298,7 +297,7 @@ type errorEnvelope struct {
 
   <p>And <code>Fail</code>, which is where the "never leak internals" rule actually lives:</p>
 
-  <figure class="code"><figcaption><span class="path">api/internal/httpx/respond.go</span><span class="tag">continued</span></figcaption><pre><code>func Fail(w http.ResponseWriter, r *http.Request, err error) {
+  <figure class="code"><figcaption><span class="path">internal/httpx/respond.go</span><span class="tag">continued</span></figcaption><pre><code>func Fail(w http.ResponseWriter, r *http.Request, err error) {
 	appErr := AsError(err)
 	if appErr == nil {
 		appErr = Internal(err)
@@ -329,7 +328,7 @@ type errorEnvelope struct {
 
   <p><code>main.go</code> already installed a slog JSON handler, but the router used chi's <code>middleware.Logger</code>, which writes coloured plain text. So the application logged JSON and the request lines did not — the worst of both.</p>
 
-  <figure class="code"><figcaption><span class="path">api/internal/httpx/middleware.go</span><span class="tag new">new file</span></figcaption><pre><code>func RequestLogger(next http.Handler) http.Handler {
+  <figure class="code"><figcaption><span class="path">internal/httpx/middleware.go</span><span class="tag new">new file</span></figcaption><pre><code>func RequestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
@@ -365,7 +364,7 @@ func levelFor(status int) slog.Level {
 
   <p>Swap it in the router, keeping the order — <code>RequestID</code> before the logger so every line has an id, <code>Recoverer</code> inside so a panic is still logged:</p>
 
-  <figure class="code"><figcaption><span class="path">api/internal/httpapi/server.go</span><span class="tag">edit</span></figcaption><pre><code>r.Use(middleware.RequestID)
+  <figure class="code"><figcaption><span class="path">internal/httpapi/server.go</span><span class="tag">edit</span></figcaption><pre><code>r.Use(middleware.RequestID)
 r.Use(middleware.RealIP)
 r.Use(httpx.RequestLogger)   // was middleware.Logger
 r.Use(middleware.Recoverer)
@@ -379,7 +378,7 @@ r.Use(middleware.Timeout(30 * time.Second))</code></pre></figure>
 
   <p>The plan's end-of-day check is explicit: <em>deleting JWT_SECRET stops the server with a clear message.</em> There was no <code>JWT_SECRET</code> anywhere in the project, so that test could not pass.</p>
 
-  <figure class="code"><figcaption><span class="path">api/internal/config/config.go</span><span class="tag">edit</span></figcaption><pre><code>// MinJWTSecretLen is the shortest secret we accept. Below 256 bits an HMAC
+  <figure class="code"><figcaption><span class="path">internal/config/config.go</span><span class="tag">edit</span></figcaption><pre><code>// MinJWTSecretLen is the shortest secret we accept. Below 256 bits an HMAC
 // signing key is brute-forceable, so this is a hard floor rather than advice.
 const MinJWTSecretLen = 32
 
@@ -470,7 +469,7 @@ JWT_SECRET=dev_only_change_me_0123456789_abcdefghijklmnop</code></pre></figure>
 
   <p>Validation gains per-field messages, which is what <code>fields</code> exists for:</p>
 
-  <figure class="code"><figcaption><span class="path">api/internal/httpapi/employees.go</span><span class="tag">edit</span></figcaption><pre><code>fields := map[string]string{}
+  <figure class="code"><figcaption><span class="path">internal/httpapi/employees.go</span><span class="tag">edit</span></figcaption><pre><code>fields := map[string]string{}
 if body.FullName == "" {
 	fields["full_name"] = "required"
 }
@@ -486,7 +485,7 @@ if len(fields) &gt; 0 {
 
   <p>And constraint mapping now returns typed errors with stable codes:</p>
 
-  <figure class="code"><figcaption><span class="path">api/internal/httpapi/employees.go</span><span class="tag">edit</span></figcaption><pre><code>func constraintError(err error) error {
+  <figure class="code"><figcaption><span class="path">internal/httpapi/employees.go</span><span class="tag">edit</span></figcaption><pre><code>func constraintError(err error) error {
 	switch pgCode(err) {
 	case "23505": // unique_violation
 		return httpx.Conflict("an employee with that email already exists").
@@ -504,7 +503,7 @@ if len(fields) &gt; 0 {
 
   <p>Then wire the routes through the adapter, and add the ping endpoint:</p>
 
-  <figure class="code"><figcaption><span class="path">api/internal/httpapi/server.go</span><span class="tag">edit</span></figcaption><pre><code>r.Get("/healthz", httpx.Handle(s.health))
+  <figure class="code"><figcaption><span class="path">internal/httpapi/server.go</span><span class="tag">edit</span></figcaption><pre><code>r.Get("/healthz", httpx.Handle(s.health))
 
 r.Route("/api/v1", func(r chi.Router) {
 	r.Get("/ping", httpx.Handle(s.ping))
@@ -550,7 +549,7 @@ export interface Envelope&lt;T&gt; {
 	meta: Meta;
 }
 
-/** Mirrors the Kind constants in `api/internal/httpx/errors.go`. */
+/** Mirrors the Kind constants in `internal/httpx/errors.go`. */
 export type ErrorKind =
 	| 'validation'
 	| 'unauthenticated'
@@ -598,17 +597,108 @@ export type ErrorKind =
 </section>
 
 <!-- 7 -->
-<section class="step last">
+<section class="step">
   <div class="num">7</div>
   <h2>The folder tree and the README</h2>
 
   <p>The plan wants every directory to exist up front so none needs creating mid-build. Three were missing:</p>
 
-  <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>mkdir api\internal\platform, api\internal\modules, deploy</code></pre></figure>
+  <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>mkdir internal\platform, internal\modules, deploy</code></pre></figure>
 
   <p>Rather than empty <code>.gitkeep</code> files, each got a README naming what lands there and on which day — <code>internal/platform</code> for auth, authz, tenant and audit (Days 3–4), <code>internal/modules</code> for the five-file domain pattern (Day 6+), <code>deploy</code> for Caddy and the Dockerfile (Day 14). Git needs a file to track a directory anyway; making it a useful one costs nothing.</p>
 
   <p>The README previously described a single-surface employees app. It now opens with the three portals, and documents the envelope contract and the full kind-to-status table, since that is what anyone writing a handler needs on hand.</p>
+</section>
+
+<!-- 8 -->
+<section class="step last">
+  <div class="num">8</div>
+  <h2>Moving the module to the root</h2>
+
+  <p>The tree still did not match. Six directories sat under <code>api/</code> instead of the repository root, and <code>api/</code> itself meant the wrong thing — the plan reserves it for API specifications, not Go source.</p>
+
+  <aside class="note">
+    <p><strong>The cost of leaving it was not the move — it was a translation tax.</strong> The plan's prompts are written to be pasted verbatim and they name paths like <code>internal/modules/hr</code>. With Go under <code>api/</code>, every prompt from Day 6 to Day 14 needs editing first, and every reply comes back with paths that do not match the tree. Twenty modules of that adds up.</p>
+  </aside>
+
+  <p>Use <code>git mv</code>, not the file explorer — git then records renames and history follows the files:</p>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>git mv api/internal internal
+git mv api/cmd cmd
+git mv api/db/migrations internal/db/migrations
+git mv api/db/query internal/db/query
+git mv api/go.mod go.mod
+git mv api/go.sum go.sum
+git mv api/sqlc.yaml sqlc.yaml</code></pre></figure>
+
+  <p>Drop the <code>/api</code> suffix from the module path, then rewrite every import that referenced it:</p>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>go mod edit -module github.com/Dhananjayan507/office360</code></pre></figure>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · rewrite imports in place</span></figcaption><pre><code>$old = 'github.com/Dhananjayan507/office360/api/internal'
+$new = 'github.com/Dhananjayan507/office360/internal'
+Get-ChildItem -Recurse -Filter *.go -File |
+  Where-Object { $_.FullName -notlike '*\node_modules\*' } |
+  ForEach-Object {
+    $t = [System.IO.File]::ReadAllText($_.FullName, [System.Text.Encoding]::UTF8)
+    if ($t.Contains($old)) {
+      [System.IO.File]::WriteAllText($_.FullName, $t.Replace($old, $new),
+        (New-Object System.Text.UTF8Encoding($false)))
+    }
+  }</code></pre></figure>
+
+  <p>Then point sqlc at the new locations:</p>
+
+  <figure class="code"><figcaption><span class="path">sqlc.yaml</span><span class="tag">edit</span></figcaption><pre><code>    schema: "internal/db/migrations"
+    queries: "internal/db/query"</code></pre></figure>
+
+  <h3>cmd/migrate</h3>
+
+  <p>The one directory in the plan's tree that had never existed. It wraps golang-migrate as a <em>library</em>, so a bare checkout needs nothing on <code>PATH</code> beyond Go:</p>
+
+  <figure class="code"><figcaption><span class="path">cmd/migrate/main.go</span><span class="tag new">new file</span></figcaption><pre><code>const migrationsPath = "file://internal/db/migrations"
+
+func run() error {
+	flag.Usage = usage
+	flag.Parse()
+
+	// A migration tool has no business demanding a JWT secret, so this reads
+	// DATABASE_URL directly instead of going through internal/config.
+	for _, path := range []string{".env", "../.env"} {
+		_ = godotenv.Load(path)
+	}
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		return errors.New("DATABASE_URL is required (copy .env.example to .env)")
+	}
+
+	m, err := migrate.New(migrationsPath, dsn)
+	if err != nil {
+		return fmt.Errorf("open migrations: %w", err)
+	}
+	defer m.Close()
+
+	switch cmd := flag.Arg(0); cmd {
+	case "", "up":
+		return report(m, m.Up())
+	case "down":
+		steps, err := stepArg(1)
+		if err != nil {
+			return err
+		}
+		return report(m, m.Steps(-steps))
+	// version, force ...
+	}
+}
+
+// report treats ErrNoChange as success - re-running `up` on an up-to-date
+// database is a no-op, not a failure, and scripts should not special-case it.</code></pre></figure>
+
+  <p>Finally, repoint <code>make.ps1</code> (every Go task now runs from the root, and <code>migrate</code> calls <code>./cmd/migrate</code> instead of the CLI), update <code>launch.json</code>, and leave a README in <code>api/</code> stating that it holds specifications — otherwise Go source drifts back into it.</p>
+
+  <aside class="note warn">
+    <p><strong>Re-run <code>sqlc generate</code> after the move.</strong> The generated files are fine, but <code>sqlc.yaml</code> paths are relative to the config file — leave them pointing at <code>db/migrations</code> and generation fails with a confusing "no schema files found".</p>
+  </aside>
 </section>
 
 <hr class="rule">
@@ -669,30 +759,48 @@ exit=1  {"level":"ERROR","msg":"server exited",
 </section>
 
 <section>
-  <h2>What Day 1 still leaves open</h2>
+  <h2>The tree, before and after</h2>
 
-  <p>One structural question is deliberately unanswered here, because it is yours to decide.</p>
+  <p>All ten directories the plan names now exist, at the depth it expects.</p>
 
   <div class="tbl">
     <table>
-      <thead><tr><th></th><th>The plan</th><th>This repo</th></tr></thead>
+      <thead><tr><th>Plan</th><th>Was</th><th>Now</th></tr></thead>
       <tbody>
-        <tr><td>Go module root</td><td class="mono">repo root</td><td class="mono">api/</td></tr>
-        <tr><td>Server entry</td><td class="mono">cmd/server</td><td class="mono">api/cmd/server</td></tr>
-        <tr><td>Migrations</td><td class="mono">internal/db/migrations</td><td class="mono">api/db/migrations</td></tr>
-        <tr><td>Meaning of <code>api/</code></td><td>API specifications</td><td>all Go source</td></tr>
+        <tr><td class="mono">cmd/server</td><td class="mono">api/cmd/server</td><td class="mono">cmd/server</td></tr>
+        <tr><td class="mono">cmd/migrate</td><td class="no">did not exist</td><td class="mono">cmd/migrate</td></tr>
+        <tr><td class="mono">internal/platform</td><td class="mono">api/internal/platform</td><td class="mono">internal/platform</td></tr>
+        <tr><td class="mono">internal/modules</td><td class="mono">api/internal/modules</td><td class="mono">internal/modules</td></tr>
+        <tr><td class="mono">internal/db</td><td class="mono">api/internal/db</td><td class="mono">internal/db</td></tr>
+        <tr><td class="mono">internal/httpx</td><td class="no">did not exist</td><td class="mono">internal/httpx</td></tr>
+        <tr><td class="mono">web</td><td class="mono">web</td><td class="mono">web</td></tr>
+        <tr><td class="mono">api</td><td>held all Go source</td><td>API specifications</td></tr>
+        <tr><td class="mono">deploy</td><td class="no">did not exist</td><td class="mono">deploy</td></tr>
+        <tr><td class="mono">docs</td><td class="mono">docs</td><td class="mono">docs</td></tr>
       </tbody>
     </table>
   </div>
 
+  <p>Migrations moved with it — <code>api/db/migrations</code> is now
+  <code>internal/db/migrations</code>, which is where the plan's Day 2 prompt
+  expects to write them.</p>
+
+  <h2 style="margin-top:2.4rem">What Day 1 does not give you</h2>
+
+  <p>Worth being blunt about, because the tree looks more finished than the system is:</p>
+
+  <ul>
+    <li><strong>No authentication.</strong> <code>JWT_SECRET</code> is validated at start-up, but nothing signs or verifies a token yet — that is Day 3.</li>
+    <li><strong>No multi-tenancy.</strong> No <code>organization_id</code> on any table, no tenant middleware. Every row is visible to every caller.</li>
+    <li><strong>No tests.</strong> <code>./make.ps1 check</code> compiles and type-checks; it proves nothing about behaviour.</li>
+    <li><strong>Two tables,</strong> against roughly thirty-five the plan calls for on Day 2.</li>
+  </ul>
+
   <aside class="note warn">
-    <p><strong>The cost is not the move — it is the translation tax.</strong> The plan's prompts are written to be pasted as-is, and they name paths like <code>internal/modules/hr</code>. With Go under <code>api/</code>, every prompt from Day 6 to Day 14 needs editing before use, and every reply comes back with paths that do not match your tree.</p>
-    <p>Moving now is roughly half a day: one module path change, mechanical import rewrites, and updates to <code>make.ps1</code>, <code>launch.json</code> and <code>sqlc.yaml</code>. Git records it as renames, so history survives. After Day 5, with 31 pages and 35 tables in place, it is a much larger job.</p>
+    <p><strong>Do not build features on the current schema.</strong> Day 2 adds <code>organization_id</code> as the first column of every business table, and Day 4 gates on an automated test proving one organisation cannot read another's data. The plan is right that retrofitting tenancy is the one mistake that genuinely costs time — and every table added before then is another table to migrate.</p>
   </aside>
 
-  <p>Day 2 is the next hard dependency either way: the full table set, <code>organization_id</code> on every business table, and the transaction manager. Multi-tenancy does not exist yet, and the plan is right that retrofitting it later is the one mistake that genuinely costs time.</p>
-
-  <p class="foot">Committed as <code>ac6de42</code> — 18 files changed, 785 insertions, 293 deletions. All checks green against Postgres 16.14 on port 5434.</p>
+  <p class="foot">Two commits: <code>ac6de42</code> — 18 files changed, 785 insertions, 293 deletions — and <code>1d8b3f1</code>, the module move and <code>cmd/migrate</code>. Verified against Postgres 16.14 on port 5434: <code>go build</code>, <code>go vet</code> and <code>svelte-check</code> clean; every typed error mapping exercised end to end; all three config-failure paths exiting 1 with a clear message.</p>
 </section>
 
 </div>
