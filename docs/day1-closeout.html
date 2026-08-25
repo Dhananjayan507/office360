@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Changes made to bring office360 up to the 14-day plan Day 1 spec.">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+img,svg,video{max-width:100%;height:auto}
+pre{overflow-x:auto}
+table{border-collapse:collapse}
+</style><title>office360 Day 1 Closeout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;1,400&display=swap">
+
+<style>
+:root{
+  --paper:#f4f7f8; --surface:#fff; --surface-2:#eaf1f3;
+  --ink:#0f171c; --ink-2:#33454f; --muted:#63767f;
+  --rule:#d6e1e5; --rule-2:#c2d2d8;
+  --accent:#0b6e7f; --accent-ink:#075462; --accent-soft:#dbedf0;
+  --danger:#9a3a26; --danger-soft:#f8e7e2;
+  --ok:#2c6b4f; --ok-soft:#dfeee7;
+  --code-bg:#eff5f6;
+  --shadow:0 1px 2px rgba(15,23,28,.05), 0 10px 26px -20px rgba(15,23,28,.5);
+  --sans:"IBM Plex Sans",ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  --serif:"IBM Plex Serif",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0d1216; --surface:#151d22; --surface-2:#1c262c;
+    --ink:#e4ecef; --ink-2:#bacad1; --muted:#8a9ea7;
+    --rule:#24323a; --rule-2:#31434c;
+    --accent:#57c2d3; --accent-ink:#8ad9e6; --accent-soft:#10303a;
+    --danger:#e08d75; --danger-soft:#331f19;
+    --ok:#6bc59b; --ok-soft:#14291f;
+    --code-bg:#101a1f;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 26px -20px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0d1216; --surface:#151d22; --surface-2:#1c262c;
+  --ink:#e4ecef; --ink-2:#bacad1; --muted:#8a9ea7;
+  --rule:#24323a; --rule-2:#31434c;
+  --accent:#57c2d3; --accent-ink:#8ad9e6; --accent-soft:#10303a;
+  --danger:#e08d75; --danger-soft:#331f19;
+  --ok:#6bc59b; --ok-soft:#14291f;
+  --code-bg:#101a1f;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 26px -20px rgba(0,0,0,.9);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--serif);font-size:16.5px;line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:58rem;margin:0 auto;padding:0 1.5rem 5rem}
+p,li{max-width:67ch}
+a{color:var(--accent-ink);text-underline-offset:2px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
+
+.mast{padding:3.5rem 0 2rem;border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:var(--mono);font-size:.68rem;font-weight:600;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--accent-ink);margin:0 0 .9rem}
+h1{font-family:var(--sans);font-weight:700;font-size:clamp(1.9rem,4.6vw,2.75rem);
+  line-height:1.06;letter-spacing:-.028em;margin:0 0 .8rem;text-wrap:balance}
+.standfirst{font-size:1.07rem;color:var(--ink-2);margin:0;max-width:60ch}
+
+h2{font-family:var(--sans);font-weight:600;font-size:1.38rem;letter-spacing:-.02em;
+  line-height:1.2;margin:0 0 .45rem;text-wrap:balance}
+h3{font-family:var(--sans);font-weight:600;font-size:.98rem;margin:1.9rem 0 .5rem}
+.lede{color:var(--ink-2);margin:0 0 1.3rem}
+section{margin-top:3rem}
+
+.step{position:relative;padding-left:3.9rem;margin-top:2.9rem}
+.step::before{content:"";position:absolute;left:1.27rem;top:2.75rem;bottom:-2.9rem;
+  width:1px;background:var(--rule-2)}
+.step.last::before{display:none}
+.num{position:absolute;left:0;top:0;width:2.55rem;height:2.55rem;display:grid;place-items:center;
+  border-radius:50%;background:var(--surface);border:1px solid var(--rule-2);
+  color:var(--accent-ink);font-family:var(--mono);font-weight:600;font-size:.9rem;
+  font-variant-numeric:tabular-nums;z-index:1}
+@media (max-width:640px){.step{padding-left:0}.step::before{display:none}.num{position:static;margin-bottom:.8rem}}
+
+figure.code{margin:1.15rem 0;background:var(--surface);border:1px solid var(--rule);
+  border-radius:4px;overflow:hidden;box-shadow:var(--shadow)}
+figure.code figcaption{display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  padding:.5rem .8rem;background:var(--surface-2);border-bottom:1px solid var(--rule);
+  font-family:var(--mono);font-size:.72rem}
+figcaption .path{color:var(--ink-2);font-weight:600;overflow-wrap:anywhere}
+figcaption .tag{flex:none;color:var(--muted);font-size:.64rem;letter-spacing:.08em;text-transform:uppercase}
+figcaption .tag.new{color:var(--accent-ink)}
+figcaption .tag.del{color:var(--danger)}
+figure.code pre{margin:0;padding:.85rem .95rem;overflow-x:auto;background:var(--code-bg);
+  font-family:var(--mono);font-size:.775rem;line-height:1.58;color:var(--ink);tab-size:2}
+figure.code.sh figcaption .path::before{content:"› ";color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em}
+p code,li code,td code{background:var(--accent-soft);padding:.08em .34em;border-radius:2px;
+  color:var(--accent-ink);font-size:.82em}
+
+aside.note{margin:1.2rem 0;padding:.85rem 1rem;border-left:3px solid var(--accent);
+  background:var(--accent-soft);border-radius:0 3px 3px 0;font-size:.9rem;color:var(--ink-2)}
+aside.note p{margin:0;max-width:63ch}
+aside.note p + p{margin-top:.55rem}
+aside.note strong{color:var(--ink);font-family:var(--sans);font-weight:600;font-size:.94em}
+aside.note.warn{border-left-color:var(--danger);background:var(--danger-soft)}
+aside.note.ok{border-left-color:var(--ok);background:var(--ok-soft)}
+
+.tbl{overflow-x:auto;margin:1.4rem 0;border:1px solid var(--rule);border-radius:4px;
+  background:var(--surface);box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-family:var(--sans);font-size:.85rem}
+th{text-align:left;font-weight:600;font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);background:var(--surface-2);padding:.55rem .8rem;
+  border-bottom:1px solid var(--rule);white-space:nowrap}
+td{padding:.58rem .8rem;border-bottom:1px solid var(--rule);color:var(--ink-2);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+td:first-child{color:var(--ink);font-weight:500}
+td.yes{color:var(--ok);font-weight:600}
+td.no{color:var(--danger);font-weight:600}
+.mono{font-family:var(--mono);font-size:.8rem}
+
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.2rem 0}
+@media (max-width:720px){.ba{grid-template-columns:1fr}}
+.ba figure.code{margin:0}
+
+hr.rule{border:none;border-top:1px solid var(--rule);margin:3rem 0 0}
+.foot{margin-top:2rem;font-size:.83rem;color:var(--muted);font-family:var(--sans)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">Change log · 14-day plan</p>
+  <h1>Closing the gaps in Day 1</h1>
+  <p class="standfirst">The scaffold already ran, but it was not built to the plan's Day 1 spec. This is every change made to close that gap — what was missing, what replaced it, and how to do each step by hand.</p>
+</header>
+
+<section>
+  <h2>What was actually missing</h2>
+  <p class="lede">An audit against the plan's Day 1 checklist. The tooling was fine; the structural decisions were not.</p>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Day 1 requirement</th><th>Before</th><th>After</th></tr></thead>
+      <tbody>
+        <tr><td>Toolchain installed and verified</td><td class="yes">done</td><td class="yes">done</td></tr>
+        <tr><td>Repo on GitHub</td><td class="yes">done</td><td class="yes">done</td></tr>
+        <tr><td>chi server, configurable port</td><td class="yes">done</td><td class="yes">done</td></tr>
+        <tr><td>recover, request_id middleware</td><td class="yes">done</td><td class="yes">done</td></tr>
+        <tr><td><code>GET /healthz</code></td><td class="yes">done</td><td class="yes">done</td></tr>
+        <tr><td>Success envelope <code>{data, meta}</code></td><td class="no">missing</td><td class="yes">done</td></tr>
+        <tr><td>Error envelope with kind/code/fields</td><td class="no">missing</td><td class="yes">done</td></tr>
+        <tr><td>Typed error set mapped centrally</td><td class="no">missing</td><td class="yes">done</td></tr>
+        <tr><td>Structured JSON request logging</td><td class="no">plain text</td><td class="yes">done</td></tr>
+        <tr><td>Refuses to start without <code>JWT_SECRET</code></td><td class="no">missing</td><td class="yes">done</td></tr>
+        <tr><td><code>GET /api/v1/ping</code></td><td class="no">missing</td><td class="yes">done</td></tr>
+        <tr><td>Full folder tree</td><td class="no">4 of 9</td><td class="yes">done</td></tr>
+        <tr><td>README naming the three portals</td><td class="no">missing</td><td class="yes">done</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <aside class="note">
+    <p><strong>Why these particular gaps mattered.</strong> They are not loose ends — they are the contract every later day is written against. Day 6 onward, every handler in every module returns through this envelope. Get it wrong now and twenty modules inherit it.</p>
+  </aside>
+</section>
+
+<hr class="rule">
+
+<!-- 1 -->
+<section class="step">
+  <div class="num">1</div>
+  <h2>The typed error set</h2>
+  <p class="goal"></p>
+
+  <p>The plan's rule is one sentence: <em>handlers must never build status codes directly — they return a typed error and httpx maps it.</em> That exists so one kind of failure cannot be a 400 in one module and a 422 in another.</p>
+
+  <p>Create <code>api/internal/httpx/errors.go</code>. The heart of it is the kind list and the single map:</p>
+
+  <figure class="code"><figcaption><span class="path">api/internal/httpx/errors.go</span><span class="tag new">new file</span></figcaption><pre><code>type Kind string
+
+const (
+	KindValidation       Kind = "validation"
+	KindUnauthenticated  Kind = "unauthenticated"
+	KindForbidden        Kind = "forbidden"
+	KindNotFound         Kind = "not_found"
+	KindMethodNotAllowed Kind = "method_not_allowed"
+	KindConflict         Kind = "conflict"
+	KindRuleViolation    Kind = "rule_violation"
+	KindRateLimited      Kind = "rate_limited"
+	KindInternal         Kind = "internal"
+)
+
+// statusByKind is the only place in the codebase that maps a failure onto an
+// HTTP status.
+var statusByKind = map[Kind]int{
+	KindValidation:       http.StatusBadRequest,          // 400
+	KindUnauthenticated:  http.StatusUnauthorized,        // 401
+	KindForbidden:        http.StatusForbidden,           // 403
+	KindNotFound:         http.StatusNotFound,            // 404
+	KindMethodNotAllowed: http.StatusMethodNotAllowed,    // 405
+	KindConflict:         http.StatusConflict,            // 409
+	KindRuleViolation:    http.StatusUnprocessableEntity, // 422
+	KindRateLimited:      http.StatusTooManyRequests,     // 429
+	KindInternal:         http.StatusInternalServerError, // 500
+}
+
+func (k Kind) Status() int {
+	if s, ok := statusByKind[k]; ok {
+		return s
+	}
+	return http.StatusInternalServerError
+}</code></pre></figure>
+
+  <p>Then the error type itself. <code>cause</code> is unexported deliberately — it reaches the logs and never the client:</p>
+
+  <figure class="code"><figcaption><span class="path">api/internal/httpx/errors.go</span><span class="tag">continued</span></figcaption><pre><code>type Error struct {
+	Kind    Kind
+	Message string
+	// Code is a stable machine-readable identifier such as
+	// "employee.email_taken", so clients can branch without parsing prose.
+	Code string
+	// Fields carries per-field validation messages, keyed by the JSON field name.
+	Fields map[string]string
+
+	cause error
+}
+
+func (e *Error) Error() string {
+	if e.cause != nil {
+		return fmt.Sprintf("%s: %s: %v", e.Kind, e.Message, e.cause)
+	}
+	return fmt.Sprintf("%s: %s", e.Kind, e.Message)
+}
+
+func (e *Error) Unwrap() error { return e.cause }
+func (e *Error) Status() int   { return e.Kind.Status() }
+
+func (e *Error) WithCode(code string) *Error { e.Code = code; return e }
+
+func AsError(err error) *Error {
+	var e *Error
+	if errors.As(err, &amp;e) {
+		return e
+	}
+	return nil
+}</code></pre></figure>
+
+  <p>Plus one constructor per kind — <code>Validation(msg, fields)</code>, <code>NotFound(msg)</code>, <code>Conflict(msg)</code>, <code>RuleViolation(msg)</code>, <code>Internal(cause)</code> and the rest.</p>
+
+  <aside class="note">
+    <p><strong>One deliberate deviation from the plan.</strong> Its list stops at 429 and has no 405. Without one, chi's default method-not-allowed handler answers in plain text and bypasses the envelope entirely — so a client parsing JSON gets a surprise. <code>KindMethodNotAllowed</code> closes that hole. It extends the principle rather than breaking it.</p>
+    <p><strong>Unknown kinds fall to 500, not 200.</strong> If someone adds a kind and forgets the map entry, the failure is loud instead of a success response with an error body.</p>
+  </aside>
+</section>
+
+<!-- 2 -->
+<section class="step">
+  <div class="num">2</div>
+  <h2>The envelopes and the Handle adapter</h2>
+
+  <p>Go handlers have a fixed signature that returns nothing, so "return a typed error" needs an adapter. That is what makes the rule enforceable rather than a convention people forget.</p>
+
+  <figure class="code"><figcaption><span class="path">api/internal/httpx/respond.go</span><span class="tag new">new file</span></figcaption><pre><code>// HandlerFunc is a handler that returns an error instead of writing one.
+type HandlerFunc func(http.ResponseWriter, *http.Request) error
+
+// Handle turns a HandlerFunc into an http.HandlerFunc, routing any returned
+// error through Fail. This is what keeps status codes out of handler bodies.
+func Handle(h HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := h(w, r); err != nil {
+			Fail(w, r, err)
+		}
+	}
+}</code></pre></figure>
+
+  <p>The envelopes. <code>Meta</code> always carries the request id; the pagination fields appear only on lists:</p>
+
+  <figure class="code"><figcaption><span class="path">api/internal/httpx/respond.go</span><span class="tag">continued</span></figcaption><pre><code>type Meta struct {
+	RequestID string `json:"request_id,omitempty"`
+	Total     *int64 `json:"total,omitempty"`
+	Limit     *int32 `json:"limit,omitempty"`
+	Offset    *int32 `json:"offset,omitempty"`
+}
+
+type successEnvelope struct {
+	Data any   `json:"data"`
+	Meta *Meta `json:"meta"`
+}
+
+type errorEnvelope struct {
+	Error errorPayload `json:"error"`
+	Meta  *Meta        `json:"meta"`
+}</code></pre></figure>
+
+  <p>And <code>Fail</code>, which is where the "never leak internals" rule actually lives:</p>
+
+  <figure class="code"><figcaption><span class="path">api/internal/httpx/respond.go</span><span class="tag">continued</span></figcaption><pre><code>func Fail(w http.ResponseWriter, r *http.Request, err error) {
+	appErr := AsError(err)
+	if appErr == nil {
+		appErr = Internal(err)
+	}
+
+	if appErr.Kind == KindInternal {
+		// The cause is for us, never for the client.
+		slog.ErrorContext(r.Context(), "request failed",
+			"error", appErr.Error(),
+			"method", r.Method,
+			"path", r.URL.Path,
+			"request_id", middleware.GetReqID(r.Context()),
+		)
+	}
+
+	encode(w, appErr.Status(), errorEnvelope{ /* ... */ })
+}</code></pre></figure>
+
+  <aside class="note">
+    <p><strong>Any error that is not a <code>*Error</code> becomes Internal.</strong> That is the safety property worth the whole file: a raw <code>pgx</code> or <code>json</code> error returned by accident cannot reach the client, because the only path out is through this function.</p>
+  </aside>
+</section>
+
+<!-- 3 -->
+<section class="step">
+  <div class="num">3</div>
+  <h2>JSON request logging</h2>
+
+  <p><code>main.go</code> already installed a slog JSON handler, but the router used chi's <code>middleware.Logger</code>, which writes coloured plain text. So the application logged JSON and the request lines did not — the worst of both.</p>
+
+  <figure class="code"><figcaption><span class="path">api/internal/httpx/middleware.go</span><span class="tag new">new file</span></figcaption><pre><code>func RequestLogger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+
+		defer func() {
+			slog.LogAttrs(r.Context(), levelFor(ww.Status()), "request",
+				slog.String("method", r.Method),
+				slog.String("path", r.URL.Path),
+				slog.Int("status", ww.Status()),
+				slog.Int("bytes", ww.BytesWritten()),
+				slog.Duration("took", time.Since(start)),
+				slog.String("request_id", middleware.GetReqID(r.Context())),
+				slog.String("remote", r.RemoteAddr),
+			)
+		}()
+
+		next.ServeHTTP(ww, r)
+	})
+}
+
+// levelFor keeps 4xx out of the error stream - a client sending bad input is
+// not an incident, and treating it as one buries the failures that are.
+func levelFor(status int) slog.Level {
+	switch {
+	case status &gt;= 500:
+		return slog.LevelError
+	case status &gt;= 400:
+		return slog.LevelWarn
+	default:
+		return slog.LevelInfo
+	}
+}</code></pre></figure>
+
+  <p>Swap it in the router, keeping the order — <code>RequestID</code> before the logger so every line has an id, <code>Recoverer</code> inside so a panic is still logged:</p>
+
+  <figure class="code"><figcaption><span class="path">api/internal/httpapi/server.go</span><span class="tag">edit</span></figcaption><pre><code>r.Use(middleware.RequestID)
+r.Use(middleware.RealIP)
+r.Use(httpx.RequestLogger)   // was middleware.Logger
+r.Use(middleware.Recoverer)
+r.Use(middleware.Timeout(30 * time.Second))</code></pre></figure>
+</section>
+
+<!-- 4 -->
+<section class="step">
+  <div class="num">4</div>
+  <h2>The config gate</h2>
+
+  <p>The plan's end-of-day check is explicit: <em>deleting JWT_SECRET stops the server with a clear message.</em> There was no <code>JWT_SECRET</code> anywhere in the project, so that test could not pass.</p>
+
+  <figure class="code"><figcaption><span class="path">api/internal/config/config.go</span><span class="tag">edit</span></figcaption><pre><code>// MinJWTSecretLen is the shortest secret we accept. Below 256 bits an HMAC
+// signing key is brute-forceable, so this is a hard floor rather than advice.
+const MinJWTSecretLen = 32
+
+// validate fails the whole start-up rather than degrading. A server running
+// without a signing secret would accept forged tokens, so there is no safe
+// fallback to reach for here.
+func (c Config) validate() error {
+	if c.DatabaseURL == "" {
+		return errors.New("DATABASE_URL is required (copy .env.example to .env)")
+	}
+	if c.JWTSecret == "" {
+		return errors.New("JWT_SECRET is required (copy .env.example to .env)")
+	}
+	if len(c.JWTSecret) &lt; MinJWTSecretLen {
+		return fmt.Errorf("JWT_SECRET must be at least %d characters, got %d",
+			MinJWTSecretLen, len(c.JWTSecret))
+	}
+	return nil
+}</code></pre></figure>
+
+  <p>Add it to the environment template too:</p>
+
+  <figure class="code"><figcaption><span class="path">.env.example</span><span class="tag">edit</span></figcaption><pre><code># Signing key for session tokens. Must be at least 32 characters or the server
+# refuses to start. Generate a real one per environment - never reuse this value
+# outside local development:
+#   openssl rand -base64 48
+JWT_SECRET=dev_only_change_me_0123456789_abcdefghijklmnop</code></pre></figure>
+
+  <aside class="note warn">
+    <p><strong>Testing this is harder than it looks.</strong> Setting <code>$env:JWT_SECRET = ""</code> in PowerShell does not give the child process an empty variable — Windows drops empty values, so the variable arrives <em>unset</em>. godotenv then loads the repo's <code>.env</code>, finds a perfectly good secret, and the server starts. The test appears to fail when the code is right.</p>
+    <p>Run the binary from a directory with no <code>.env</code> above it, and use <code>Remove-Item env:JWT_SECRET</code> rather than assigning an empty string.</p>
+  </aside>
+</section>
+
+<!-- 5 -->
+<section class="step">
+  <div class="num">5</div>
+  <h2>Migrating the handlers</h2>
+
+  <p>Every handler changes signature to return an error. The shape of the change, using the delete path:</p>
+
+  <div class="ba">
+    <figure class="code"><figcaption><span class="path">before</span><span class="tag del">removed</span></figcaption><pre><code>func (s *Server) deleteEmployee(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+
+	rows, err := s.q.DeleteEmployee(r.Context(), id)
+	if err != nil {
+		writeInternal(w, "delete", err)
+		return
+	}
+	if rows == 0 {
+		writeError(w, http.StatusNotFound,
+			"employee not found")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}</code></pre></figure>
+
+    <figure class="code"><figcaption><span class="path">after</span><span class="tag new">current</span></figcaption><pre><code>func (s *Server) deleteEmployee(
+	w http.ResponseWriter,
+	r *http.Request,
+) error {
+	id, err := pathUUID(r)
+	if err != nil {
+		return err
+	}
+
+	rows, err := s.q.DeleteEmployee(r.Context(), id)
+	if err != nil {
+		return httpx.Internal(err)
+	}
+	if rows == 0 {
+		return httpx.NotFound("employee not found")
+	}
+
+	return httpx.NoContent(w, r)
+}</code></pre></figure>
+  </div>
+
+  <p>Note the helpers lose their <code>ResponseWriter</code>. <code>pathUUID</code> no longer writes anything — it returns an error and lets the caller propagate it, which is why the awkward <code>(value, ok)</code> pairs disappear.</p>
+
+  <p>Validation gains per-field messages, which is what <code>fields</code> exists for:</p>
+
+  <figure class="code"><figcaption><span class="path">api/internal/httpapi/employees.go</span><span class="tag">edit</span></figcaption><pre><code>fields := map[string]string{}
+if body.FullName == "" {
+	fields["full_name"] = "required"
+}
+if body.Email == "" {
+	fields["email"] = "required"
+}
+if body.Status != nil &amp;&amp; !employeeStatuses[*body.Status] {
+	fields["status"] = "invalid value"
+}
+if len(fields) &gt; 0 {
+	return httpx.Validation("the employee could not be created", fields)
+}</code></pre></figure>
+
+  <p>And constraint mapping now returns typed errors with stable codes:</p>
+
+  <figure class="code"><figcaption><span class="path">api/internal/httpapi/employees.go</span><span class="tag">edit</span></figcaption><pre><code>func constraintError(err error) error {
+	switch pgCode(err) {
+	case "23505": // unique_violation
+		return httpx.Conflict("an employee with that email already exists").
+			WithCode("employee.email_taken")
+	case "23503": // foreign_key_violation
+		return httpx.Validation("the employee could not be saved",
+			map[string]string{"department_id": "no such department"})
+	case "23514": // check_violation
+		return httpx.Validation(statusMessage,
+			map[string]string{"status": "invalid value"})
+	default:
+		return nil
+	}
+}</code></pre></figure>
+
+  <p>Then wire the routes through the adapter, and add the ping endpoint:</p>
+
+  <figure class="code"><figcaption><span class="path">api/internal/httpapi/server.go</span><span class="tag">edit</span></figcaption><pre><code>r.Get("/healthz", httpx.Handle(s.health))
+
+r.Route("/api/v1", func(r chi.Router) {
+	r.Get("/ping", httpx.Handle(s.ping))
+
+	r.Route("/employees", func(r chi.Router) {
+		r.Get("/", httpx.Handle(s.listEmployees))
+		r.Post("/", httpx.Handle(s.createEmployee))
+		r.Get("/{id}", httpx.Handle(s.getEmployee))
+		r.Patch("/{id}", httpx.Handle(s.updateEmployee))
+		r.Delete("/{id}", httpx.Handle(s.deleteEmployee))
+	})
+})
+
+r.NotFound(httpx.Handle(func(_ http.ResponseWriter, _ *http.Request) error {
+	return httpx.NotFound("route not found")
+}))
+r.MethodNotAllowed(httpx.Handle(func(_ http.ResponseWriter, _ *http.Request) error {
+	return httpx.MethodNotAllowed("method not allowed for this route")
+}))</code></pre></figure>
+
+  <aside class="note">
+    <p><strong>Health keeps its own status code, on purpose.</strong> It calls <code>httpx.Write</code> with an explicit 200 or 503 rather than returning a typed error, because there the status <em>is</em> the answer — a monitor reads it without parsing the body. That is the documented exception, not a loophole.</p>
+    <p><strong>Ordering trap in update:</strong> the <code>pgx.ErrNoRows</code> check must come before the constraint check. An update against a missing id is a 404, not a 400.</p>
+  </aside>
+</section>
+
+<!-- 6 -->
+<section class="step">
+  <div class="num">6</div>
+  <h2>The TypeScript client follows</h2>
+
+  <p>Changing the envelope is a breaking API change, so the front end must move with it or the page silently renders nothing.</p>
+
+  <figure class="code"><figcaption><span class="path">web/src/lib/types.ts</span><span class="tag">edit</span></figcaption><pre><code>export interface Meta {
+	request_id?: string;
+	total?: number;
+	limit?: number;
+	offset?: number;
+}
+
+export interface Envelope&lt;T&gt; {
+	data: T;
+	meta: Meta;
+}
+
+/** Mirrors the Kind constants in `api/internal/httpx/errors.go`. */
+export type ErrorKind =
+	| 'validation'
+	| 'unauthenticated'
+	| 'forbidden'
+	| 'not_found'
+	| 'method_not_allowed'
+	| 'conflict'
+	| 'rule_violation'
+	| 'rate_limited'
+	| 'internal';</code></pre></figure>
+
+  <p><code>ApiError</code> now carries the structured payload instead of a flattened string, so a form can highlight the field the API objected to:</p>
+
+  <figure class="code"><figcaption><span class="path">web/src/lib/api.ts</span><span class="tag">edit</span></figcaption><pre><code>export class ApiError extends Error {
+	constructor(
+		readonly status: number,
+		readonly kind: ErrorKind,
+		message: string,
+		readonly code?: string,
+		readonly fields?: Record&lt;string, string&gt;,
+		readonly requestId?: string
+	) {
+		super(message);
+		this.name = 'ApiError';
+	}
+
+	/** Message for a specific form field, when the API reported one. */
+	fieldError(name: string): string | undefined {
+		return this.fields?.[name];
+	}
+}</code></pre></figure>
+
+  <p>Callers read <code>.data</code> and <code>.meta</code> rather than a flat object:</p>
+
+  <figure class="code"><figcaption><span class="path">web/src/routes/+page.ts</span><span class="tag">edit</span></figcaption><pre><code>return {
+	employees: employees.data,
+	total: employees.meta.total ?? employees.data.length,
+	departments: departments.data,
+	apiError: null as string | null
+};</code></pre></figure>
+
+  <aside class="note">
+    <p><strong>Branch on <code>kind</code>, not on <code>status</code>.</strong> The kind is the stable contract; the status is derived from it. Code that keys off <code>=== 409</code> breaks the day a failure legitimately moves between statuses, while <code>=== 'conflict'</code> keeps working.</p>
+  </aside>
+</section>
+
+<!-- 7 -->
+<section class="step last">
+  <div class="num">7</div>
+  <h2>The folder tree and the README</h2>
+
+  <p>The plan wants every directory to exist up front so none needs creating mid-build. Three were missing:</p>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>mkdir api\internal\platform, api\internal\modules, deploy</code></pre></figure>
+
+  <p>Rather than empty <code>.gitkeep</code> files, each got a README naming what lands there and on which day — <code>internal/platform</code> for auth, authz, tenant and audit (Days 3–4), <code>internal/modules</code> for the five-file domain pattern (Day 6+), <code>deploy</code> for Caddy and the Dockerfile (Day 14). Git needs a file to track a directory anyway; making it a useful one costs nothing.</p>
+
+  <p>The README previously described a single-surface employees app. It now opens with the three portals, and documents the envelope contract and the full kind-to-status table, since that is what anyone writing a handler needs on hand.</p>
+</section>
+
+<hr class="rule">
+
+<section>
+  <h2>Verification</h2>
+  <p class="lede">Actual responses from the running server, not expected ones.</p>
+
+  <figure class="code"><figcaption><span class="path">every kind, end to end</span></figcaption><pre><code>GET  /api/v1/ping
+[200] {"data":{"message":"pong","env":"development"},
+       "meta":{"request_id":"Z14-55M/bTIJeZ3KVD-000001"}}
+
+GET  /healthz
+[200] {"data":{"status":"ok","db":"up","env":"development"},"meta":{...}}
+
+GET  /api/v1/nope
+[404] {"error":{"kind":"not_found","message":"route not found"},"meta":{...}}
+
+PUT  /api/v1/employees
+[405] {"error":{"kind":"method_not_allowed",
+       "message":"method not allowed for this route"},"meta":{...}}
+
+POST /api/v1/employees  {"full_name":"","email":""}
+[400] {"error":{"kind":"validation",
+       "message":"the employee could not be created",
+       "fields":{"email":"required","full_name":"required"}},"meta":{...}}
+
+POST /api/v1/employees  {"fullname":"x","email":"a@b.c"}
+[400] {"error":{"kind":"validation",
+       "message":"request body is not valid JSON: json: unknown field \"fullname\""}}
+
+POST /api/v1/employees  {"full_name":"Ada Lovelace","email":"ada@office360.dev"}
+[201] {"data":{"id":"ef3ce824-...","full_name":"Ada Lovelace",...},"meta":{...}}
+
+POST /api/v1/employees  (same payload again)
+[409] {"error":{"kind":"conflict",
+       "message":"an employee with that email already exists",
+       "code":"employee.email_taken"},"meta":{...}}
+
+GET  /api/v1/employees
+[200] {"data":[{...}],"meta":{"request_id":"...","total":1,"limit":50,"offset":0}}</code></pre></figure>
+
+  <figure class="code"><figcaption><span class="path">config gate — run with no .env reachable</span></figcaption><pre><code>JWT_SECRET unset
+exit=1  {"level":"ERROR","msg":"server exited",
+         "error":"JWT_SECRET is required (copy .env.example to .env)"}
+
+JWT_SECRET 10 chars
+exit=1  {"level":"ERROR","msg":"server exited",
+         "error":"JWT_SECRET must be at least 32 characters, got 10"}
+
+DATABASE_URL unset
+exit=1  {"level":"ERROR","msg":"server exited",
+         "error":"DATABASE_URL is required (copy .env.example to .env)"}</code></pre></figure>
+
+  <aside class="note ok">
+    <p><strong>Day 1's end-of-day check now passes in full.</strong> <code>go build</code>, <code>go vet</code> and <code>svelte-check</code> are clean, every typed error maps to its status, and removing <code>JWT_SECRET</code> stops the server with a clear message.</p>
+  </aside>
+</section>
+
+<section>
+  <h2>What Day 1 still leaves open</h2>
+
+  <p>One structural question is deliberately unanswered here, because it is yours to decide.</p>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th></th><th>The plan</th><th>This repo</th></tr></thead>
+      <tbody>
+        <tr><td>Go module root</td><td class="mono">repo root</td><td class="mono">api/</td></tr>
+        <tr><td>Server entry</td><td class="mono">cmd/server</td><td class="mono">api/cmd/server</td></tr>
+        <tr><td>Migrations</td><td class="mono">internal/db/migrations</td><td class="mono">api/db/migrations</td></tr>
+        <tr><td>Meaning of <code>api/</code></td><td>API specifications</td><td>all Go source</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <aside class="note warn">
+    <p><strong>The cost is not the move — it is the translation tax.</strong> The plan's prompts are written to be pasted as-is, and they name paths like <code>internal/modules/hr</code>. With Go under <code>api/</code>, every prompt from Day 6 to Day 14 needs editing before use, and every reply comes back with paths that do not match your tree.</p>
+    <p>Moving now is roughly half a day: one module path change, mechanical import rewrites, and updates to <code>make.ps1</code>, <code>launch.json</code> and <code>sqlc.yaml</code>. Git records it as renames, so history survives. After Day 5, with 31 pages and 35 tables in place, it is a much larger job.</p>
+  </aside>
+
+  <p>Day 2 is the next hard dependency either way: the full table set, <code>organization_id</code> on every business table, and the transaction manager. Multi-tenancy does not exist yet, and the plan is right that retrofitting it later is the one mistake that genuinely costs time.</p>
+
+  <p class="foot">Committed as <code>ac6de42</code> — 18 files changed, 785 insertions, 293 deletions. All checks green against Postgres 16.14 on port 5434.</p>
+</section>
+
+</div>
+</body>
+</html>
