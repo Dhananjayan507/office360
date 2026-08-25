@@ -1,0 +1,2020 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Every command and file needed to rebuild the office360 scaffold by hand.">
+<style>
+/* minimal reset — supplied by the artifact host when published, inlined here */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+img,svg,video{max-width:100%;height:auto}
+pre{overflow-x:auto}
+table{border-collapse:collapse}
+</style><title>office360 Build Manual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --paper:#f4f7f8; --surface:#fff; --surface-2:#eaf1f3;
+  --ink:#0f171c; --ink-2:#33454f; --muted:#63767f;
+  --rule:#d6e1e5; --rule-2:#c2d2d8;
+  --accent:#0b6e7f; --accent-ink:#075462; --accent-soft:#dbedf0;
+  --danger:#9a3a26; --danger-soft:#f8e7e2;
+  --ok:#2c6b4f; --ok-soft:#dfeee7;
+  --code-bg:#eff5f6;
+  --shadow:0 1px 2px rgba(15,23,28,.05), 0 10px 26px -20px rgba(15,23,28,.5);
+  --sans:"IBM Plex Sans",ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  --serif:"IBM Plex Serif",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0d1216; --surface:#151d22; --surface-2:#1c262c;
+    --ink:#e4ecef; --ink-2:#bacad1; --muted:#8a9ea7;
+    --rule:#24323a; --rule-2:#31434c;
+    --accent:#57c2d3; --accent-ink:#8ad9e6; --accent-soft:#10303a;
+    --danger:#e08d75; --danger-soft:#331f19;
+    --ok:#6bc59b; --ok-soft:#14291f;
+    --code-bg:#101a1f;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 26px -20px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0d1216; --surface:#151d22; --surface-2:#1c262c;
+  --ink:#e4ecef; --ink-2:#bacad1; --muted:#8a9ea7;
+  --rule:#24323a; --rule-2:#31434c;
+  --accent:#57c2d3; --accent-ink:#8ad9e6; --accent-soft:#10303a;
+  --danger:#e08d75; --danger-soft:#331f19;
+  --ok:#6bc59b; --ok-soft:#14291f;
+  --code-bg:#101a1f;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 26px -20px rgba(0,0,0,.9);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--serif); font-size:17px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:63rem; margin:0 auto; padding:0 1.5rem 6rem}
+p,li{max-width:68ch}
+a{color:var(--accent-ink); text-underline-offset:2px}
+:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:3px}
+
+/* ---------- masthead ---------- */
+.mast{padding:4.5rem 0 2.5rem; border-bottom:2px solid var(--ink)}
+.eyebrow{
+  font-family:var(--mono); font-size:.7rem; font-weight:600;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink);
+  margin:0 0 1.1rem;
+}
+h1{
+  font-family:var(--sans); font-weight:700; font-size:clamp(2.1rem,5.2vw,3.3rem);
+  line-height:1.04; letter-spacing:-.028em; margin:0 0 1rem; text-wrap:balance;
+}
+.standfirst{font-size:1.16rem; color:var(--ink-2); margin:0; max-width:60ch}
+.meta{
+  display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1.8rem;
+  font-family:var(--mono); font-size:.72rem; letter-spacing:.02em;
+}
+.meta span{
+  padding:.3rem .6rem; border:1px solid var(--rule-2); border-radius:2px;
+  color:var(--ink-2); background:var(--surface);
+}
+
+/* ---------- generic ---------- */
+h2{
+  font-family:var(--sans); font-weight:600; font-size:1.55rem;
+  letter-spacing:-.02em; line-height:1.2; margin:0 0 .5rem; text-wrap:balance;
+}
+h3{
+  font-family:var(--sans); font-weight:600; font-size:1.02rem;
+  letter-spacing:-.01em; margin:2.2rem 0 .6rem; text-wrap:balance;
+}
+.lede{color:var(--ink-2); margin:0 0 1.5rem}
+section{margin-top:3.4rem}
+
+/* ---------- contents ---------- */
+.toc{
+  margin-top:2.5rem; padding:1.4rem 1.5rem; background:var(--surface);
+  border:1px solid var(--rule); border-radius:4px; box-shadow:var(--shadow);
+}
+.toc h2{font-size:.72rem; font-family:var(--mono); font-weight:600;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-bottom:.9rem}
+.toc ol{
+  list-style:none; margin:0; padding:0; columns:2; column-gap:2.5rem;
+  font-family:var(--sans); font-size:.9rem;
+}
+.toc li{max-width:none; break-inside:avoid; padding:.22rem 0}
+.toc a{text-decoration:none; color:var(--ink-2); display:flex; gap:.6rem}
+.toc a:hover{color:var(--accent-ink)}
+.toc .n{font-family:var(--mono); font-size:.78rem; color:var(--muted);
+  font-variant-numeric:tabular-nums; flex:none}
+@media (max-width:640px){.toc ol{columns:1}}
+
+/* ---------- phases ---------- */
+.phase{position:relative; padding-left:4.4rem; margin-top:3.8rem}
+.phase::before{
+  content:""; position:absolute; left:1.42rem; top:3.1rem; bottom:-3.8rem;
+  width:1px; background:var(--rule-2);
+}
+.phase.last::before{display:none}
+.num{
+  position:absolute; left:0; top:0; width:2.85rem; height:2.85rem;
+  display:grid; place-items:center; border-radius:50%;
+  background:var(--surface); border:1px solid var(--rule-2); color:var(--accent-ink);
+  font-family:var(--mono); font-weight:600; font-size:.95rem;
+  font-variant-numeric:tabular-nums; z-index:1;
+}
+.goal{
+  font-family:var(--sans); font-size:.79rem; font-weight:500; color:var(--muted);
+  letter-spacing:.03em; margin:0 0 1.2rem;
+}
+@media (max-width:700px){
+  .phase{padding-left:0}
+  .phase::before{display:none}
+  .num{position:static; margin-bottom:.9rem}
+}
+
+/* ---------- code ---------- */
+figure.code{
+  margin:1.4rem 0; background:var(--surface); border:1px solid var(--rule);
+  border-radius:4px; overflow:hidden; box-shadow:var(--shadow);
+}
+figure.code figcaption{
+  display:flex; align-items:center; justify-content:space-between; gap:1rem;
+  padding:.55rem .85rem; background:var(--surface-2);
+  border-bottom:1px solid var(--rule); font-family:var(--mono); font-size:.74rem;
+}
+figcaption .path{color:var(--ink-2); font-weight:600; overflow-wrap:anywhere}
+figcaption .tag{
+  flex:none; color:var(--muted); font-size:.66rem; letter-spacing:.08em;
+  text-transform:uppercase;
+}
+figcaption .tag.new{color:var(--accent-ink)}
+figcaption .tag.gen{color:var(--muted)}
+figcaption .tag.edit{color:var(--danger)}
+figure.code pre{
+  margin:0; padding:.95rem 1rem; overflow-x:auto; background:var(--code-bg);
+  font-family:var(--mono); font-size:.795rem; line-height:1.6; color:var(--ink);
+  tab-size:2;
+}
+figure.code.sh pre{background:var(--code-bg)}
+figure.code.sh figcaption .path::before{content:"› "; color:var(--accent)}
+code{font-family:var(--mono); font-size:.86em}
+p code,li code,td code{
+  background:var(--accent-soft); padding:.08em .34em; border-radius:2px;
+  color:var(--accent-ink); font-size:.82em;
+}
+
+/* ---------- callouts ---------- */
+aside.note{
+  margin:1.4rem 0; padding:.9rem 1.1rem; border-left:3px solid var(--accent);
+  background:var(--accent-soft); border-radius:0 3px 3px 0;
+  font-size:.93rem; color:var(--ink-2);
+}
+aside.note p{margin:0; max-width:64ch}
+aside.note p + p{margin-top:.6rem}
+aside.note strong{color:var(--ink); font-family:var(--sans); font-weight:600; font-size:.93em}
+aside.note.warn{border-left-color:var(--danger); background:var(--danger-soft)}
+aside.note.ok{border-left-color:var(--ok); background:var(--ok-soft)}
+
+/* ---------- tree ---------- */
+.tree{
+  background:var(--surface); border:1px solid var(--rule); border-radius:4px;
+  padding:1.1rem 1.2rem; margin:1.6rem 0; overflow-x:auto;
+  font-family:var(--mono); font-size:.78rem; line-height:1.75;
+  box-shadow:var(--shadow);
+}
+.tree pre{margin:0}
+.tree .c{color:var(--muted)}
+.tree .d{color:var(--accent-ink); font-weight:600}
+
+/* ---------- tables ---------- */
+.tbl{overflow-x:auto; margin:1.5rem 0; border:1px solid var(--rule);
+  border-radius:4px; background:var(--surface); box-shadow:var(--shadow)}
+table{width:100%; border-collapse:collapse; font-family:var(--sans); font-size:.87rem}
+th{
+  text-align:left; font-weight:600; font-size:.68rem; letter-spacing:.09em;
+  text-transform:uppercase; color:var(--muted); background:var(--surface-2);
+  padding:.6rem .85rem; border-bottom:1px solid var(--rule); white-space:nowrap;
+}
+td{padding:.62rem .85rem; border-bottom:1px solid var(--rule); color:var(--ink-2);
+  vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+td:first-child{color:var(--ink); font-weight:500; white-space:nowrap}
+td code{white-space:nowrap}
+
+/* ---------- checklist ---------- */
+ul.check{list-style:none; padding:0; margin:1.2rem 0}
+ul.check li{
+  position:relative; padding-left:1.7rem; margin:.5rem 0; font-size:.95rem;
+  color:var(--ink-2);
+}
+ul.check li::before{
+  content:""; position:absolute; left:0; top:.52em; width:.62rem; height:.62rem;
+  border:1.5px solid var(--accent); border-radius:2px;
+}
+ol.plain{padding-left:1.3rem}
+ol.plain li{margin:.45rem 0; color:var(--ink-2)}
+
+hr.rule{border:none; border-top:1px solid var(--rule); margin:3.5rem 0 0}
+.foot{margin-top:2.2rem; font-size:.85rem; color:var(--muted); font-family:var(--sans)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">Build manual · Windows · VS Code</p>
+  <h1>office360 from an empty folder</h1>
+  <p class="standfirst">Every command and every file needed to reproduce this project scaffold by hand — Go 1.23 and chi behind sqlc, PostgreSQL 16 in Docker, and a SvelteKit 2 front end, wired to a GitHub repo under its own identity.</p>
+  <div class="meta">
+    <span>Go 1.23 · chi v5 · pgx v5</span>
+    <span>sqlc + golang-migrate</span>
+    <span>PostgreSQL 16</span>
+    <span>SvelteKit 2 · Svelte 5</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#p1"><span class="n">01</span> Install the toolchain</a></li>
+    <li><a href="#p2"><span class="n">02</span> Folder and git identity</a></li>
+    <li><a href="#p3"><span class="n">03</span> Root configuration files</a></li>
+    <li><a href="#p4"><span class="n">04</span> The database container</a></li>
+    <li><a href="#p5"><span class="n">05</span> Go module and dependencies</a></li>
+    <li><a href="#p6"><span class="n">06</span> Schema, queries, sqlc</a></li>
+    <li><a href="#p7"><span class="n">07</span> The Go server</a></li>
+    <li><a href="#p8"><span class="n">08</span> The SvelteKit app</a></li>
+    <li><a href="#p9"><span class="n">09</span> Task runner and VS Code</a></li>
+    <li><a href="#p10"><span class="n">10</span> Project documentation</a></li>
+    <li><a href="#p11"><span class="n">11</span> Connect to GitHub</a></li>
+    <li><a href="#p12"><span class="n">12</span> First run</a></li>
+    <li><a href="#reuse"><span class="n">→</span> Reusing this for a new project</a></li>
+    <li><a href="#traps"><span class="n">→</span> Traps worth knowing</a></li>
+  </ol>
+</nav>
+
+<section>
+  <h2>What you end up with</h2>
+  <p class="lede">This is the tree the manual produces — the same one your VS Code explorer shows.</p>
+  <div class="tree"><pre><span class="d">office360/</span>
+├─ <span class="d">.vscode/</span>            <span class="c">extensions, settings, tasks, launch</span>
+├─ <span class="d">api/</span>                <span class="c">Go backend</span>
+│  ├─ <span class="d">cmd/server/</span>      <span class="c">main() — config, pool, router, shutdown</span>
+│  ├─ <span class="d">internal/config/</span> <span class="c">env loading</span>
+│  ├─ <span class="d">internal/db/</span>     <span class="c">GENERATED by sqlc — never hand-edit</span>
+│  ├─ <span class="d">internal/httpapi/</span><span class="c">chi router + handlers</span>
+│  ├─ <span class="d">db/migrations/</span>   <span class="c">golang-migrate .up/.down pairs</span>
+│  ├─ <span class="d">db/query/</span>        <span class="c">hand-written SQL → input to sqlc</span>
+│  ├─ go.mod / go.sum
+│  └─ sqlc.yaml
+├─ <span class="d">web/</span>                <span class="c">SvelteKit 2 frontend</span>
+│  └─ <span class="d">src/lib/</span>         <span class="c">api.ts (typed client), types.ts</span>
+├─ .editorconfig
+├─ .env               <span class="c">local only — gitignored</span>
+├─ .env.example       <span class="c">committed template</span>
+├─ .gitignore
+├─ CLAUDE.md          <span class="c">repo-specific AI guidance</span>
+├─ docker-compose.yml <span class="c">Postgres 16</span>
+├─ make.ps1           <span class="c">task runner</span>
+└─ README.md</pre></div>
+  <aside class="note">
+    <p><strong>Scope note.</strong> Everything below is verbatim and complete, with one deliberate exception: the sqlc-generated files under <code>api/internal/db/</code> and the boilerplate the SvelteKit CLI writes (<code>app.html</code>, <code>app.d.ts</code>, <code>tsconfig.json</code>, <code>favicon.svg</code>). Those are produced by tools you will run in steps 06 and 08 — typing them by hand would be wrong, and they get overwritten anyway.</p>
+  </aside>
+</section>
+
+<hr class="rule">
+
+<!-- ============ 01 ============ -->
+<section class="phase" id="p1">
+  <div class="num">01</div>
+  <h2>Install the toolchain</h2>
+  <p class="goal">Four installers, two <code>go install</code> commands, one verification pass.</p>
+
+  <p>Install Go 1.23+, Node 20+, Git, and Docker Desktop from their own installers first. Then add the two Go CLI tools this stack depends on:</p>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · anywhere</span></figcaption><pre><code>go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest</code></pre></figure>
+
+  <p>Both land in <code>%USERPROFILE%\go\bin</code>. That directory must be on your <code>PATH</code> or the later steps will not find them. Verify everything at once:</p>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · anywhere</span></figcaption><pre><code>go version; node --version; docker compose version; sqlc version; migrate -version</code></pre></figure>
+
+  <aside class="note">
+    <p><strong>The <code>-tags 'postgres'</code> flag is not optional.</strong> golang-migrate compiles database drivers in behind build tags. Install it without that tag and the binary works fine right up until it reports an unknown driver for your <code>postgres://</code> URL.</p>
+  </aside>
+</section>
+
+<!-- ============ 02 ============ -->
+<section class="phase" id="p2">
+  <div class="num">02</div>
+  <h2>Folder and git identity</h2>
+  <p class="goal">Create the repo and pin the author to this project only.</p>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell</span></figcaption><pre><code>mkdir D:\office360
+git init -b main D:\office360
+cd D:\office360</code></pre></figure>
+
+  <p>Now set the author <em>locally</em>. Every command here omits <code>--global</code> on purpose:</p>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>git config user.name  "Dhananjayan507"
+git config user.email "dhananjayan@gmail.com"
+git config core.autocrlf input</code></pre></figure>
+
+  <aside class="note warn">
+    <p><strong>Why local, not global.</strong> If you already have a git identity for a different account on this machine, a <code>--global</code> setting here would silently re-author your other projects' commits. Local config lives in <code>.git/config</code> and applies to this folder alone. Confirm with <code>git config user.email</code> run from inside the folder.</p>
+    <p><code>core.autocrlf input</code> stops Windows CRLF line endings from being committed, which otherwise shows up as a whole-file diff the first time a colleague on macOS or Linux touches it.</p>
+  </aside>
+</section>
+
+<!-- ============ 03 ============ -->
+<section class="phase" id="p3">
+  <div class="num">03</div>
+  <h2>Root configuration files</h2>
+  <p class="goal">Four files that decide what gets committed and how config flows.</p>
+
+  <figure class="code"><figcaption><span class="path">.gitignore</span><span class="tag new">new file</span></figcaption><pre><code># --- secrets ---
+.env
+.env.*
+!.env.example
+
+# --- go ---
+/api/bin/
+/api/tmp/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# --- node / sveltekit ---
+node_modules/
+/web/.svelte-kit/
+/web/build/
+/web/.vercel/
+/web/.output/
+.npm/
+*.tsbuildinfo
+
+# --- editors / os ---
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# --- local data ---
+/data/
+*.log</code></pre></figure>
+
+  <aside class="note">
+    <p><strong>Two patterns here are doing real work.</strong> <code>.env</code> then <code>!.env.example</code> ignores every environment file <em>except</em> the committed template — order matters, the negation must come after the rule it reverses. The <code>.vscode/*</code> block does the same thing: ignore the folder's contents, then re-admit the four files a team actually benefits from sharing, while leaving your personal editor state out.</p>
+    <p>Note <code>.vscode/*</code> with a trailing <code>/*</code> rather than <code>.vscode/</code>. Git cannot re-include a file inside a directory it has already excluded, so ignoring the <em>contents</em> instead of the <em>directory</em> is what makes the four negations work at all.</p>
+  </aside>
+
+  <figure class="code"><figcaption><span class="path">.editorconfig</span><span class="tag new">new file</span></figcaption><pre><code>root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.go]
+indent_style = tab
+
+[Makefile]
+indent_style = tab
+
+[*.md]
+trim_trailing_whitespace = false</code></pre></figure>
+
+  <p>Go is gofmt-formatted with tabs; everything else uses two spaces. Encoding this here means the editor obeys without anyone having to remember.</p>
+
+  <figure class="code"><figcaption><span class="path">.env.example</span><span class="tag new">new file</span></figcaption><pre><code># Copy to .env and adjust. .env is gitignored — never commit real secrets.
+
+# --- postgres (matches docker-compose.yml) ---
+# Port 5433 on the host, not 5432, so this stack can run alongside other local
+# Postgres containers.
+POSTGRES_USER=office360
+POSTGRES_PASSWORD=office360_dev
+POSTGRES_DB=office360
+POSTGRES_PORT=5433
+
+# --- api ---
+# Used by the Go server and by `migrate`.
+DATABASE_URL=postgres://office360:office360_dev@localhost:5433/office360?sslmode=disable
+API_PORT=8080
+API_ENV=development
+
+# Comma-separated origins allowed to call the API from the browser.
+CORS_ORIGINS=http://localhost:5173
+
+# --- web ---
+# Read by SvelteKit at build/run time.
+PUBLIC_API_URL=http://localhost:8080</code></pre></figure>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>Copy-Item .env.example .env</code></pre></figure>
+
+  <aside class="note warn">
+    <p><strong>Pick a host port no other stack owns.</strong> 5432 is the Postgres default, so the first containerised database on your machine takes it and the second one fails to bind. Choosing 5433 up front lets this project run at the same time as any other. If you change it, change it in <em>three</em> places: <code>POSTGRES_PORT</code>, the host half of <code>DATABASE_URL</code>, and your own <code>.env</code>.</p>
+  </aside>
+</section>
+
+<!-- ============ 04 ============ -->
+<section class="phase" id="p4">
+  <div class="num">04</div>
+  <h2>The database container</h2>
+  <p class="goal">One Postgres 16 service with a health check the task runner can wait on.</p>
+
+  <figure class="code"><figcaption><span class="path">docker-compose.yml</span><span class="tag new">new file</span></figcaption><pre><code>services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: office360-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-office360}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-office360_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-office360}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - office360_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-office360} -d ${POSTGRES_DB:-office360}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  office360_pgdata:</code></pre></figure>
+
+  <aside class="note">
+    <p><strong>The health check earns its place.</strong> <code>docker compose up -d</code> returns as soon as the container starts, but Postgres needs several more seconds before it accepts connections. Without <code>healthcheck</code>, the migration in step 12 races the database and fails perhaps one run in three. The task runner polls this field instead of sleeping a fixed number of seconds.</p>
+    <p>Both <code>container_name</code> and the named volume are prefixed with the project. Compose derives default names from the folder, and two projects in similarly-named folders can collide.</p>
+  </aside>
+</section>
+
+<!-- ============ 05 ============ -->
+<section class="phase" id="p5">
+  <div class="num">05</div>
+  <h2>Go module and dependencies</h2>
+  <p class="goal">Initialise the module under your GitHub path and pull five libraries.</p>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>mkdir api
+cd api
+go mod init github.com/Dhananjayan507/office360/api
+go mod edit -go 1.23.0
+go get github.com/go-chi/chi/v5
+go get github.com/go-chi/cors
+go get github.com/jackc/pgx/v5
+go get github.com/google/uuid
+go get github.com/joho/godotenv
+cd ..</code></pre></figure>
+
+  <aside class="note">
+    <p><strong>The module path must match the repo.</strong> <code>github.com/&lt;user&gt;/&lt;repo&gt;/api</code> is what every internal import in step 07 is written against. Get it wrong now and you will be rewriting import lines across a dozen files later.</p>
+    <p><strong>On Go 1.27, <code>go mod edit -go=1.23.0</code> is rejected</strong> — the equals form fails with <em>invalid -go option</em>. Use the space-separated form shown above. This pins the language version to 1.23 while still building with whatever newer toolchain you have installed.</p>
+  </aside>
+
+  <p>Create the directory skeleton now so the files in the next two steps have somewhere to land:</p>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>mkdir api\cmd\server, api\internal\config, api\internal\httpapi, api\db\migrations, api\db\query</code></pre></figure>
+</section>
+
+<!-- ============ 06 ============ -->
+<section class="phase" id="p6">
+  <div class="num">06</div>
+  <h2>Schema, queries, sqlc</h2>
+  <p class="goal">Write SQL; let sqlc compile it into type-safe Go.</p>
+
+  <p>This is the part of the stack most likely to confuse you later, so understand the model before writing anything: <strong>sqlc reads your migrations as the schema and your query files as the queries, then generates Go.</strong> It never touches a running database. That means a query naming a column you have not yet written a migration for will fail to generate — the migrations are the source of truth, not your local Postgres.</p>
+
+  <h3>Migrations</h3>
+
+  <figure class="code"><figcaption><span class="path">api/db/migrations/000001_init.up.sql</span><span class="tag new">new file</span></figcaption><pre><code>CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE TABLE departments (
+    id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    name       text NOT NULL UNIQUE,
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE employees (
+    id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    department_id uuid REFERENCES departments (id) ON DELETE SET NULL,
+    full_name     text NOT NULL,
+    email         text NOT NULL,
+    title         text,
+    status        text NOT NULL DEFAULT 'active',
+    hired_on      date,
+    created_at    timestamptz NOT NULL DEFAULT now(),
+    updated_at    timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT employees_status_check CHECK (status IN ('active', 'on_leave', 'exited'))
+);
+
+-- Case-insensitive uniqueness without requiring the citext extension.
+CREATE UNIQUE INDEX employees_email_key ON employees (lower(email));
+CREATE INDEX employees_department_id_idx ON employees (department_id);</code></pre></figure>
+
+  <figure class="code"><figcaption><span class="path">api/db/migrations/000001_init.down.sql</span><span class="tag new">new file</span></figcaption><pre><code>DROP TABLE IF EXISTS employees;
+DROP TABLE IF EXISTS departments;</code></pre></figure>
+
+  <aside class="note">
+    <p><strong>Always write the <code>.down.sql</code>.</strong> golang-migrate pairs files by number and refuses to roll back without one. Drop in reverse dependency order — <code>employees</code> references <code>departments</code>, so it goes first.</p>
+  </aside>
+
+  <h3>Queries</h3>
+
+  <figure class="code"><figcaption><span class="path">api/db/query/departments.sql</span><span class="tag new">new file</span></figcaption><pre><code>-- name: ListDepartments :many
+SELECT * FROM departments
+ORDER BY name;
+
+-- name: GetDepartment :one
+SELECT * FROM departments
+WHERE id = $1;
+
+-- name: CreateDepartment :one
+INSERT INTO departments (name)
+VALUES ($1)
+RETURNING *;
+
+-- name: DeleteDepartment :execrows
+DELETE FROM departments
+WHERE id = $1;</code></pre></figure>
+
+  <figure class="code"><figcaption><span class="path">api/db/query/employees.sql</span><span class="tag new">new file</span></figcaption><pre><code>-- name: ListEmployees :many
+SELECT * FROM employees
+WHERE (sqlc.narg('department_id')::uuid IS NULL OR department_id = sqlc.narg('department_id')::uuid)
+  AND (sqlc.narg('status')::text IS NULL OR status = sqlc.narg('status')::text)
+ORDER BY full_name
+LIMIT sqlc.arg('limit')::int OFFSET sqlc.arg('offset')::int;
+
+-- name: CountEmployees :one
+SELECT count(*) FROM employees
+WHERE (sqlc.narg('department_id')::uuid IS NULL OR department_id = sqlc.narg('department_id')::uuid)
+  AND (sqlc.narg('status')::text IS NULL OR status = sqlc.narg('status')::text);
+
+-- name: GetEmployee :one
+SELECT * FROM employees
+WHERE id = sqlc.arg('id')::uuid;
+
+-- name: CreateEmployee :one
+INSERT INTO employees (department_id, full_name, email, title, status, hired_on)
+VALUES (
+    sqlc.narg('department_id')::uuid,
+    sqlc.arg('full_name')::text,
+    sqlc.arg('email')::text,
+    sqlc.narg('title')::text,
+    coalesce(sqlc.narg('status')::text, 'active'),
+    sqlc.narg('hired_on')::date
+)
+RETURNING *;
+
+-- name: UpdateEmployee :one
+UPDATE employees
+SET department_id = coalesce(sqlc.narg('department_id')::uuid, department_id),
+    full_name     = coalesce(sqlc.narg('full_name')::text, full_name),
+    email         = coalesce(sqlc.narg('email')::text, email),
+    title         = coalesce(sqlc.narg('title')::text, title),
+    status        = coalesce(sqlc.narg('status')::text, status),
+    hired_on      = coalesce(sqlc.narg('hired_on')::date, hired_on),
+    updated_at    = now()
+WHERE id = sqlc.arg('id')::uuid
+RETURNING *;
+
+-- name: DeleteEmployee :execrows
+DELETE FROM employees
+WHERE id = sqlc.arg('id')::uuid;</code></pre></figure>
+
+  <aside class="note warn">
+    <p><strong>Do not mix <code>$1</code> positional parameters with <code>sqlc.arg()</code> in the same query.</strong> sqlc numbers them independently and you get a generated struct whose field order silently disagrees with the SQL. Pick named parameters and stay with them; <code>arg</code> is required, <code>narg</code> is nullable.</p>
+    <p><strong>Cast every named parameter</strong> — <code>::uuid</code>, <code>::text</code>, <code>::date</code>. Postgres cannot infer the type of a bare placeholder inside <code>coalesce()</code> or on the null side of an <code>IS NULL OR</code>, and sqlc surfaces that as an unhelpful generation error.</p>
+    <p>The <code>coalesce(narg, column)</code> pattern in <code>UpdateEmployee</code> is what makes <code>PATCH</code> partial: omit a field in JSON, it arrives as Go <code>nil</code>, and the column keeps its existing value.</p>
+  </aside>
+
+  <h3>sqlc configuration</h3>
+
+  <figure class="code"><figcaption><span class="path">api/sqlc.yaml</span><span class="tag new">new file</span></figcaption><pre><code>version: "2"
+sql:
+  - engine: "postgresql"
+    schema: "db/migrations"
+    queries: "db/query"
+    gen:
+      go:
+        package: "db"
+        out: "internal/db"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        json_tags_case_style: "snake"
+        emit_pointers_for_null_types: true
+        emit_empty_slices: true
+        overrides:
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "uuid"
+            nullable: true
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"
+              pointer: true
+          - db_type: "timestamptz"
+            go_type: "time.Time"
+          - db_type: "timestamptz"
+            nullable: true
+            go_type:
+              type: "time.Time"
+              pointer: true
+          - db_type: "date"
+            go_type: "time.Time"
+          - db_type: "date"
+            nullable: true
+            go_type:
+              type: "time.Time"
+              pointer: true</code></pre></figure>
+
+  <aside class="note">
+    <p><strong>The overrides block is the difference between clean JSON and unusable JSON.</strong> Left alone, the pgx/v5 driver maps <code>uuid</code> to <code>pgtype.UUID</code> and <code>timestamptz</code> to <code>pgtype.Timestamptz</code> — wrapper structs that serialise as nested objects like <code>{"Time":"…","Valid":true}</code>. Mapping them to <code>uuid.UUID</code> and <code>time.Time</code>, with <code>emit_pointers_for_null_types</code> turning nullable columns into <code>*string</code> / <code>*time.Time</code>, gives you plain strings and honest <code>null</code>s that a TypeScript client can consume directly.</p>
+    <p><code>emit_empty_slices</code> is a smaller kindness: list queries return <code>[]</code> instead of <code>null</code> when nothing matches, so the front end never has to null-check before mapping.</p>
+  </aside>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · api/</span></figcaption><pre><code>cd api
+sqlc generate
+cd ..</code></pre></figure>
+
+  <p>This writes four files into <code>api/internal/db/</code>: <code>db.go</code>, <code>models.go</code>, <code>departments.sql.go</code>, <code>employees.sql.go</code>. They are generated output — commit them, but never edit them, because the next <code>sqlc generate</code> discards your changes without warning.</p>
+</section>
+
+<!-- ============ 07 ============ -->
+<section class="phase" id="p7">
+  <div class="num">07</div>
+  <h2>The Go server</h2>
+  <p class="goal">Six hand-written files: config, response helpers, router, and handlers.</p>
+
+  <figure class="code"><figcaption><span class="path">api/internal/config/config.go</span><span class="tag new">new file</span></figcaption><pre><code>// Package config loads runtime configuration from the environment.
+package config
+
+import (
+	"errors"
+	"os"
+	"strings"
+
+	"github.com/joho/godotenv"
+)
+
+type Config struct {
+	DatabaseURL string
+	Port        string
+	Env         string
+	CORSOrigins []string
+}
+
+// Load reads configuration from the environment, falling back to a .env file
+// when one is present. Real deployments inject variables directly, so a missing
+// .env is never an error.
+func Load() (Config, error) {
+	// Loaded one at a time: godotenv.Load stops at the first missing file, and
+	// earlier files win, so the repo root .env applies when running from ./api.
+	for _, path := range []string{".env", "../.env", "../../.env"} {
+		_ = godotenv.Load(path)
+	}
+
+	cfg := Config{
+		DatabaseURL: os.Getenv("DATABASE_URL"),
+		Port:        envOr("API_PORT", "8080"),
+		Env:         envOr("API_ENV", "development"),
+	}
+
+	if cfg.DatabaseURL == "" {
+		return Config{}, errors.New("DATABASE_URL is required (copy .env.example to .env)")
+	}
+
+	for _, origin := range strings.Split(envOr("CORS_ORIGINS", "http://localhost:5173"), ",") {
+		if origin = strings.TrimSpace(origin); origin != "" {
+			cfg.CORSOrigins = append(cfg.CORSOrigins, origin)
+		}
+	}
+
+	return cfg, nil
+}
+
+func (c Config) IsProduction() bool { return c.Env == "production" }
+
+func envOr(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}</code></pre></figure>
+
+  <aside class="note">
+    <p><strong>The three-path loop is load-bearing.</strong> <code>godotenv.Load()</code> given several filenames at once aborts at the first one that does not exist, so passing <code>".env", "../.env"</code> in a single call silently skips the root file whenever you run from <code>api/</code>. Loading each separately, and relying on godotenv never overwriting an already-set variable, makes the server work from either directory.</p>
+  </aside>
+
+  <figure class="code"><figcaption><span class="path">api/internal/httpapi/respond.go</span><span class="tag new">new file</span></figcaption><pre><code>package httpapi
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgconn"
+)
+
+const maxRequestBody = 1 &lt;&lt; 20 // 1 MiB
+
+type errorBody struct {
+	Error string `json:"error"`
+}
+
+type listBody[T any] struct {
+	Data   []T   `json:"data"`
+	Total  int64 `json:"total"`
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	if v == nil {
+		return
+	}
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		slog.Error("encode response", "error", err)
+	}
+}
+
+func writeError(w http.ResponseWriter, status int, msg string) {
+	writeJSON(w, status, errorBody{Error: msg})
+}
+
+// writeInternal logs the real cause and returns a generic message, so internal
+// details never reach the client.
+func writeInternal(w http.ResponseWriter, op string, err error) {
+	slog.Error(op, "error", err)
+	writeError(w, http.StatusInternalServerError, "internal server error")
+}
+
+func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBody))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(dst); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body: "+err.Error())
+		return false
+	}
+	return true
+}
+
+// pgCode returns the SQLSTATE of a Postgres error, or "" for any other error.
+func pgCode(err error) string {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &amp;pgErr) {
+		return pgErr.Code
+	}
+	return ""
+}
+
+// jsonDate accepts a bare "YYYY-MM-DD" string, which is what a Postgres `date`
+// column means — time.Time alone would demand a full RFC 3339 timestamp.
+type jsonDate struct{ time.Time }
+
+func (d *jsonDate) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &amp;s); err != nil {
+		return err
+	}
+	if s == "" {
+		return nil
+	}
+	t, err := time.Parse(time.DateOnly, s)
+	if err != nil {
+		return fmt.Errorf("date must be formatted YYYY-MM-DD, got %q", s)
+	}
+	d.Time = t
+	return nil
+}
+
+func (d *jsonDate) timePtr() *time.Time {
+	if d == nil || d.IsZero() {
+		return nil
+	}
+	return &amp;d.Time
+}</code></pre></figure>
+
+  <aside class="note">
+    <p><strong><code>DisallowUnknownFields</code> turns typos into 400s.</strong> Without it, a client sending <code>{"fullname":…}</code> instead of <code>{"full_name":…}</code> gets a cheerful 201 and a record with an empty name. <code>MaxBytesReader</code> caps the body so a malicious or broken client cannot exhaust memory.</p>
+    <p><code>timePtr</code> has a pointer receiver and checks <code>d == nil</code> deliberately — that makes it safe to call on an absent JSON field without a nil guard at every call site.</p>
+  </aside>
+
+  <figure class="code"><figcaption><span class="path">api/internal/httpapi/server.go</span><span class="tag new">new file</span></figcaption><pre><code>// Package httpapi wires the chi router and HTTP handlers onto the sqlc query layer.
+package httpapi
+
+import (
+	"net/http"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/Dhananjayan507/office360/api/internal/config"
+	"github.com/Dhananjayan507/office360/api/internal/db"
+)
+
+type Server struct {
+	cfg  config.Config
+	pool *pgxpool.Pool
+	q    *db.Queries
+}
+
+func NewServer(cfg config.Config, pool *pgxpool.Pool) *Server {
+	return &amp;Server{cfg: cfg, pool: pool, q: db.New(pool)}
+}
+
+func (s *Server) Routes() http.Handler {
+	r := chi.NewRouter()
+
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.Timeout(30 * time.Second))
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   s.cfg.CORSOrigins,
+		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodDelete, http.MethodOptions},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
+
+	r.Get("/healthz", s.health)
+
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Route("/departments", func(r chi.Router) {
+			r.Get("/", s.listDepartments)
+			r.Post("/", s.createDepartment)
+			r.Delete("/{id}", s.deleteDepartment)
+		})
+
+		r.Route("/employees", func(r chi.Router) {
+			r.Get("/", s.listEmployees)
+			r.Post("/", s.createEmployee)
+			r.Get("/{id}", s.getEmployee)
+			r.Patch("/{id}", s.updateEmployee)
+			r.Delete("/{id}", s.deleteEmployee)
+		})
+	})
+
+	r.NotFound(func(w http.ResponseWriter, _ *http.Request) {
+		writeError(w, http.StatusNotFound, "route not found")
+	})
+	r.MethodNotAllowed(func(w http.ResponseWriter, _ *http.Request) {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+	})
+
+	return r
+}</code></pre></figure>
+
+  <figure class="code"><figcaption><span class="path">api/internal/httpapi/health.go</span><span class="tag new">new file</span></figcaption><pre><code>package httpapi
+
+import (
+	"context"
+	"net/http"
+	"time"
+)
+
+type healthBody struct {
+	Status string `json:"status"`
+	DB     string `json:"db"`
+	Env    string `json:"env"`
+}
+
+func (s *Server) health(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+
+	body := healthBody{Status: "ok", DB: "up", Env: s.cfg.Env}
+	status := http.StatusOK
+
+	if err := s.pool.Ping(ctx); err != nil {
+		body.Status, body.DB = "degraded", "down"
+		status = http.StatusServiceUnavailable
+	}
+
+	writeJSON(w, status, body)
+}</code></pre></figure>
+
+  <figure class="code"><figcaption><span class="path">api/internal/httpapi/departments.go</span><span class="tag new">new file</span></figcaption><pre><code>package httpapi
+
+import (
+	"net/http"
+	"strings"
+
+	"github.com/Dhananjayan507/office360/api/internal/db"
+)
+
+func (s *Server) listDepartments(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.q.ListDepartments(r.Context())
+	if err != nil {
+		writeInternal(w, "list departments", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, listBody[db.Department]{
+		Data:  rows,
+		Total: int64(len(rows)),
+		Limit: int32(len(rows)),
+	})
+}
+
+type createDepartmentRequest struct {
+	Name string `json:"name"`
+}
+
+func (s *Server) createDepartment(w http.ResponseWriter, r *http.Request) {
+	var body createDepartmentRequest
+	if !decodeJSON(w, r, &amp;body) {
+		return
+	}
+
+	body.Name = strings.TrimSpace(body.Name)
+	if body.Name == "" {
+		writeError(w, http.StatusBadRequest, "name is required")
+		return
+	}
+
+	department, err := s.q.CreateDepartment(r.Context(), body.Name)
+	if pgCode(err) == "23505" {
+		writeError(w, http.StatusConflict, "a department with that name already exists")
+		return
+	}
+	if err != nil {
+		writeInternal(w, "create department", err)
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, department)
+}
+
+func (s *Server) deleteDepartment(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+
+	rows, err := s.q.DeleteDepartment(r.Context(), id)
+	if err != nil {
+		writeInternal(w, "delete department", err)
+		return
+	}
+	if rows == 0 {
+		writeError(w, http.StatusNotFound, "department not found")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}</code></pre></figure>
+
+  <figure class="code"><figcaption><span class="path">api/internal/httpapi/employees.go</span><span class="tag new">new file</span></figcaption><pre><code>package httpapi
+
+import (
+	"errors"
+	"net/http"
+	"strconv"
+	"strings"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+
+	"github.com/Dhananjayan507/office360/api/internal/db"
+)
+
+const (
+	defaultLimit = 50
+	maxLimit     = 200
+)
+
+var employeeStatuses = map[string]bool{"active": true, "on_leave": true, "exited": true}
+
+func (s *Server) listEmployees(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+
+	departmentID, ok := optionalUUIDParam(w, q.Get("department_id"), "department_id")
+	if !ok {
+		return
+	}
+
+	var status *string
+	if raw := strings.TrimSpace(q.Get("status")); raw != "" {
+		if !employeeStatuses[raw] {
+			writeError(w, http.StatusBadRequest, "status must be one of: active, on_leave, exited")
+			return
+		}
+		status = &amp;raw
+	}
+
+	limit := intParam(q.Get("limit"), defaultLimit, 1, maxLimit)
+	offset := intParam(q.Get("offset"), 0, 0, 1&lt;&lt;30)
+
+	rows, err := s.q.ListEmployees(r.Context(), db.ListEmployeesParams{
+		DepartmentID: departmentID,
+		Status:       status,
+		Limit:        limit,
+		Offset:       offset,
+	})
+	if err != nil {
+		writeInternal(w, "list employees", err)
+		return
+	}
+
+	total, err := s.q.CountEmployees(r.Context(), db.CountEmployeesParams{
+		DepartmentID: departmentID,
+		Status:       status,
+	})
+	if err != nil {
+		writeInternal(w, "count employees", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, listBody[db.Employee]{Data: rows, Total: total, Limit: limit, Offset: offset})
+}
+
+func (s *Server) getEmployee(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+
+	employee, err := s.q.GetEmployee(r.Context(), id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeError(w, http.StatusNotFound, "employee not found")
+		return
+	}
+	if err != nil {
+		writeInternal(w, "get employee", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, employee)
+}
+
+type createEmployeeRequest struct {
+	DepartmentID *uuid.UUID `json:"department_id"`
+	FullName     string     `json:"full_name"`
+	Email        string     `json:"email"`
+	Title        *string    `json:"title"`
+	Status       *string    `json:"status"`
+	HiredOn      *jsonDate  `json:"hired_on"`
+}
+
+func (s *Server) createEmployee(w http.ResponseWriter, r *http.Request) {
+	var body createEmployeeRequest
+	if !decodeJSON(w, r, &amp;body) {
+		return
+	}
+
+	body.FullName = strings.TrimSpace(body.FullName)
+	body.Email = strings.TrimSpace(body.Email)
+
+	if body.FullName == "" {
+		writeError(w, http.StatusBadRequest, "full_name is required")
+		return
+	}
+	if body.Email == "" {
+		writeError(w, http.StatusBadRequest, "email is required")
+		return
+	}
+	if !validStatus(w, body.Status) {
+		return
+	}
+
+	employee, err := s.q.CreateEmployee(r.Context(), db.CreateEmployeeParams{
+		DepartmentID: body.DepartmentID,
+		FullName:     body.FullName,
+		Email:        body.Email,
+		Title:        body.Title,
+		Status:       body.Status,
+		HiredOn:      body.HiredOn.timePtr(),
+	})
+	if handled := s.writeConstraintError(w, err); handled {
+		return
+	}
+	if err != nil {
+		writeInternal(w, "create employee", err)
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, employee)
+}
+
+type updateEmployeeRequest struct {
+	DepartmentID *uuid.UUID `json:"department_id"`
+	FullName     *string    `json:"full_name"`
+	Email        *string    `json:"email"`
+	Title        *string    `json:"title"`
+	Status       *string    `json:"status"`
+	HiredOn      *jsonDate  `json:"hired_on"`
+}
+
+func (s *Server) updateEmployee(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+
+	var body updateEmployeeRequest
+	if !decodeJSON(w, r, &amp;body) {
+		return
+	}
+	if !validStatus(w, body.Status) {
+		return
+	}
+
+	employee, err := s.q.UpdateEmployee(r.Context(), db.UpdateEmployeeParams{
+		ID:           id,
+		DepartmentID: body.DepartmentID,
+		FullName:     body.FullName,
+		Email:        body.Email,
+		Title:        body.Title,
+		Status:       body.Status,
+		HiredOn:      body.HiredOn.timePtr(),
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeError(w, http.StatusNotFound, "employee not found")
+		return
+	}
+	if handled := s.writeConstraintError(w, err); handled {
+		return
+	}
+	if err != nil {
+		writeInternal(w, "update employee", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, employee)
+}
+
+func (s *Server) deleteEmployee(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+
+	rows, err := s.q.DeleteEmployee(r.Context(), id)
+	if err != nil {
+		writeInternal(w, "delete employee", err)
+		return
+	}
+	if rows == 0 {
+		writeError(w, http.StatusNotFound, "employee not found")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// writeConstraintError maps the Postgres constraint violations these handlers
+// can legitimately hit onto 4xx responses. It reports whether it wrote a response.
+func (s *Server) writeConstraintError(w http.ResponseWriter, err error) bool {
+	switch pgCode(err) {
+	case "23505": // unique_violation
+		writeError(w, http.StatusConflict, "an employee with that email already exists")
+	case "23503": // foreign_key_violation
+		writeError(w, http.StatusBadRequest, "department_id does not reference an existing department")
+	case "23514": // check_violation
+		writeError(w, http.StatusBadRequest, "status must be one of: active, on_leave, exited")
+	default:
+		return false
+	}
+	return true
+}
+
+func validStatus(w http.ResponseWriter, status *string) bool {
+	if status != nil &amp;&amp; !employeeStatuses[*status] {
+		writeError(w, http.StatusBadRequest, "status must be one of: active, on_leave, exited")
+		return false
+	}
+	return true
+}
+
+func pathUUID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id must be a UUID")
+		return uuid.Nil, false
+	}
+	return id, true
+}
+
+func optionalUUIDParam(w http.ResponseWriter, raw, name string) (*uuid.UUID, bool) {
+	if raw = strings.TrimSpace(raw); raw == "" {
+		return nil, true
+	}
+	id, err := uuid.Parse(raw)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, name+" must be a UUID")
+		return nil, false
+	}
+	return &amp;id, true
+}
+
+// intParam clamps rather than rejects, so a stray ?limit=9999 still returns a page.
+func intParam(raw string, fallback, min, max int32) int32 {
+	if raw == "" {
+		return fallback
+	}
+	n, err := strconv.ParseInt(raw, 10, 32)
+	if err != nil {
+		return fallback
+	}
+	v := int32(n)
+	if v &lt; min {
+		return min
+	}
+	if v &gt; max {
+		return max
+	}
+	return v
+}</code></pre></figure>
+
+  <aside class="note">
+    <p><strong>Mapping SQLSTATEs to 4xx is the single highest-value habit in this file.</strong> A duplicate email is the client's mistake, not the server's — returning 409 rather than a 500 tells the caller something actionable and keeps genuine 500s meaningful in your logs. The three codes worth handling almost everywhere are <code>23505</code> unique, <code>23503</code> foreign key, and <code>23514</code> check constraint.</p>
+    <p><strong>Note the ordering trap in <code>updateEmployee</code>:</strong> the <code>pgx.ErrNoRows</code> check must come before the constraint check, because an update targeting a missing id is a 404, not a 400.</p>
+  </aside>
+
+  <figure class="code"><figcaption><span class="path">api/cmd/server/main.go</span><span class="tag new">new file</span></figcaption><pre><code>// Command server runs the office360 HTTP API.
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/Dhananjayan507/office360/api/internal/config"
+	"github.com/Dhananjayan507/office360/api/internal/httpapi"
+)
+
+func main() {
+	if err := run(); err != nil {
+		slog.Error("server exited", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &amp;slog.HandlerOptions{Level: slog.LevelInfo})))
+
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("connect postgres: %w", err)
+	}
+	defer pool.Close()
+
+	pingCtx, cancelPing := context.WithTimeout(ctx, 5*time.Second)
+	defer cancelPing()
+	if err := pool.Ping(pingCtx); err != nil {
+		return fmt.Errorf("ping postgres (is `docker compose up -d` running?): %w", err)
+	}
+
+	srv := &amp;http.Server{
+		Addr:              ":" + cfg.Port,
+		Handler:           httpapi.NewServer(cfg, pool).Routes(),
+		ReadHeaderTimeout: 10 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
+
+	serveErr := make(chan error, 1)
+	go func() {
+		slog.Info("listening", "addr", srv.Addr, "env", cfg.Env)
+		if err := srv.ListenAndServe(); err != nil &amp;&amp; !errors.Is(err, http.ErrServerClosed) {
+			serveErr &lt;- err
+		}
+	}()
+
+	select {
+	case err := &lt;-serveErr:
+		return err
+	case &lt;-ctx.Done():
+		slog.Info("shutdown signal received")
+	}
+
+	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancelShutdown()
+	return srv.Shutdown(shutdownCtx)
+}</code></pre></figure>
+
+  <aside class="note">
+    <p><strong>Ping before serving.</strong> <code>pgxpool.New</code> is lazy — it validates the URL but opens no connection, so without the explicit <code>Ping</code> a server with a wrong password starts happily and fails on the first request instead of at boot, where you would actually notice.</p>
+    <p>The shutdown context is deliberately built from <code>context.Background()</code>, not <code>ctx</code>. By the time you reach that line <code>ctx</code> is already cancelled by the signal, so deriving from it would give <code>Shutdown</code> zero time to drain in-flight requests.</p>
+  </aside>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · api/</span></figcaption><pre><code>cd api
+go mod tidy
+go build ./...
+go vet ./...
+cd ..</code></pre></figure>
+
+  <aside class="note ok">
+    <p><strong>Checkpoint.</strong> Both commands should print nothing at all. Silence is success.</p>
+  </aside>
+</section>
+
+<!-- ============ 08 ============ -->
+<section class="phase" id="p8">
+  <div class="num">08</div>
+  <h2>The SvelteKit app</h2>
+  <p class="goal">Scaffold with the official CLI, then add a typed client and one page.</p>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>npx --yes sv@latest create web --template minimal --types ts --no-add-ons --install npm</code></pre></figure>
+
+  <p>Those flags matter — <code>sv create</code> is interactive by default and will sit waiting for keystrokes without them. Then change the project name in <code>web/package.json</code> from <code>"web"</code> to something meaningful like <code>"office360-web"</code>.</p>
+
+  <figure class="code"><figcaption><span class="path">web/vite.config.ts</span><span class="tag edit">edit generated file</span></figcaption><pre><code>import adapter from '@sveltejs/adapter-auto';
+import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+	// Env lives in the repo root so the Go API and the web app share one .env file.
+	envDir: '..',
+	server: {
+		port: 5173
+	},
+	plugins: [
+		sveltekit({
+			compilerOptions: {
+				runes: ({ filename }) =&gt;
+					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
+			},
+			adapter: adapter()
+		})
+	]
+});</code></pre></figure>
+
+  <aside class="note">
+    <p><strong><code>envDir: '..'</code> is what collapses two <code>.env</code> files into one.</strong> Vite loads environment files relative to its own root, which is <code>web/</code> — so by default your <code>PUBLIC_API_URL</code> at the repo root is invisible to the front end. Pointing <code>envDir</code> one level up means a single file at the root configures both halves of the stack.</p>
+  </aside>
+
+  <figure class="code"><figcaption><span class="path">web/src/lib/types.ts</span><span class="tag new">new file</span></figcaption><pre><code>/** Mirrors the JSON shapes returned by the Go API (`api/internal/db/models.go`). */
+
+export type EmployeeStatus = 'active' | 'on_leave' | 'exited';
+
+export interface Department {
+	id: string;
+	name: string;
+	created_at: string;
+}
+
+export interface Employee {
+	id: string;
+	department_id: string | null;
+	full_name: string;
+	email: string;
+	title: string | null;
+	status: EmployeeStatus;
+	hired_on: string | null;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface ListResponse&lt;T&gt; {
+	data: T[];
+	total: number;
+	limit: number;
+	offset: number;
+}
+
+export interface Health {
+	status: string;
+	db: string;
+	env: string;
+}</code></pre></figure>
+
+  <figure class="code"><figcaption><span class="path">web/src/lib/api.ts</span><span class="tag new">new file</span></figcaption><pre><code>import { env } from '$env/dynamic/public';
+import type { Department, Employee, EmployeeStatus, Health, ListResponse } from './types';
+
+/** SvelteKit hands `load` a special fetch; pass it through so SSR requests are traced. */
+type Fetcher = typeof globalThis.fetch;
+
+interface Options {
+	fetch?: Fetcher;
+}
+
+export class ApiError extends Error {
+	constructor(
+		readonly status: number,
+		message: string
+	) {
+		super(message);
+		this.name = 'ApiError';
+	}
+}
+
+function baseUrl(): string {
+	return (env.PUBLIC_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
+}
+
+async function request&lt;T&gt;(
+	path: string,
+	{ fetch: doFetch = globalThis.fetch, ...init }: RequestInit &amp; Options = {}
+): Promise&lt;T&gt; {
+	const res = await doFetch(`${baseUrl()}${path}`, {
+		...init,
+		headers: { 'Content-Type': 'application/json', ...init.headers }
+	});
+
+	if (!res.ok) {
+		let message = `${res.status} ${res.statusText}`;
+		try {
+			const body = await res.json();
+			if (body?.error) message = body.error;
+		} catch {
+			// Error body was not JSON — keep the status line.
+		}
+		throw new ApiError(res.status, message);
+	}
+
+	if (res.status === 204) return undefined as T;
+	return (await res.json()) as T;
+}
+
+function queryString(params: Record&lt;string, string | number | undefined&gt;): string {
+	const search = new URLSearchParams();
+	for (const [key, value] of Object.entries(params)) {
+		if (value !== undefined &amp;&amp; value !== '') search.set(key, String(value));
+	}
+	const qs = search.toString();
+	return qs ? `?${qs}` : '';
+}
+
+export const health = (opts: Options = {}) =&gt; request&lt;Health&gt;('/healthz', opts);
+
+export const listDepartments = (opts: Options = {}) =&gt;
+	request&lt;ListResponse&lt;Department&gt;&gt;('/api/v1/departments', opts);
+
+export const createDepartment = (name: string, opts: Options = {}) =&gt;
+	request&lt;Department&gt;('/api/v1/departments', {
+		...opts,
+		method: 'POST',
+		body: JSON.stringify({ name })
+	});
+
+export const deleteDepartment = (id: string, opts: Options = {}) =&gt;
+	request&lt;void&gt;(`/api/v1/departments/${id}`, { ...opts, method: 'DELETE' });
+
+export interface ListEmployeesQuery {
+	department_id?: string;
+	status?: EmployeeStatus;
+	limit?: number;
+	offset?: number;
+}
+
+export const listEmployees = (query: ListEmployeesQuery = {}, opts: Options = {}) =&gt;
+	request&lt;ListResponse&lt;Employee&gt;&gt;(`/api/v1/employees${queryString({ ...query })}`, opts);
+
+export const getEmployee = (id: string, opts: Options = {}) =&gt;
+	request&lt;Employee&gt;(`/api/v1/employees/${id}`, opts);
+
+export interface CreateEmployeeInput {
+	full_name: string;
+	email: string;
+	department_id?: string | null;
+	title?: string | null;
+	status?: EmployeeStatus;
+	/** YYYY-MM-DD */
+	hired_on?: string | null;
+}
+
+export const createEmployee = (input: CreateEmployeeInput, opts: Options = {}) =&gt;
+	request&lt;Employee&gt;('/api/v1/employees', {
+		...opts,
+		method: 'POST',
+		body: JSON.stringify(input)
+	});
+
+export const updateEmployee = (
+	id: string,
+	input: Partial&lt;CreateEmployeeInput&gt;,
+	opts: Options = {}
+) =&gt;
+	request&lt;Employee&gt;(`/api/v1/employees/${id}`, {
+		...opts,
+		method: 'PATCH',
+		body: JSON.stringify(input)
+	});
+
+export const deleteEmployee = (id: string, opts: Options = {}) =&gt;
+	request&lt;void&gt;(`/api/v1/employees/${id}`, { ...opts, method: 'DELETE' });</code></pre></figure>
+
+  <aside class="note">
+    <p><strong>Why <code>$env/dynamic/public</code> and not <code>static</code>.</strong> The static variant is inlined at build time and throws outright if the variable is missing, which breaks a fresh clone before anyone has copied <code>.env.example</code>. Dynamic reads at runtime and lets the <code>?? 'http://localhost:8080'</code> fallback do its job.</p>
+    <p><strong>Threading <code>fetch</code> through every call is a SvelteKit requirement, not a style choice.</strong> During server-side rendering, the framework passes <code>load</code> an instrumented <code>fetch</code>; using the global one instead loses relative-URL resolution and request deduplication.</p>
+  </aside>
+
+  <p>Then the page itself — a load function that survives the API being down, and a table:</p>
+
+  <figure class="code"><figcaption><span class="path">web/src/routes/+page.ts</span><span class="tag new">new file</span></figcaption><pre><code>import { listDepartments, listEmployees } from '$lib/api';
+import type { PageLoad } from './$types';
+
+export const load: PageLoad = async ({ fetch }) =&gt; {
+	try {
+		const [employees, departments] = await Promise.all([
+			listEmployees({}, { fetch }),
+			listDepartments({ fetch })
+		]);
+
+		return {
+			employees: employees.data,
+			total: employees.total,
+			departments: departments.data,
+			apiError: null as string | null
+		};
+	} catch (err) {
+		// The API being down is an expected first-run state, not a page crash —
+		// render the empty dashboard with a hint instead of a 500.
+		return {
+			employees: [],
+			total: 0,
+			departments: [],
+			apiError: err instanceof Error ? err.message : 'API unreachable'
+		};
+	}
+};</code></pre></figure>
+
+  <aside class="note">
+    <p><strong>Catching in <code>load</code> is a deliberate first-run affordance.</strong> Letting the error propagate gives a new contributor a SvelteKit error page with a stack trace; catching it gives them the dashboard plus the exact command to start the missing API.</p>
+  </aside>
+
+  <p>The remaining two view files — <code>web/src/app.css</code> and <code>web/src/routes/+page.svelte</code>, plus a small nav wrapper in <code>+layout.svelte</code> — are ordinary presentation code with no scaffolding decisions embedded in them. Copy them from the repo, or write your own; nothing later in this manual depends on their contents.</p>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · web/</span></figcaption><pre><code>cd web
+npm run check
+cd ..</code></pre></figure>
+
+  <aside class="note ok">
+    <p><strong>Checkpoint.</strong> Expect <code>0 ERRORS 0 WARNINGS</code>.</p>
+  </aside>
+</section>
+
+<!-- ============ 09 ============ -->
+<section class="phase" id="p9">
+  <div class="num">09</div>
+  <h2>Task runner and VS Code</h2>
+  <p class="goal">One script that knows every command, wired to the editor.</p>
+
+  <p>Windows has no <code>make</code>, so this project uses a PowerShell script instead. Its real job is loading <code>.env</code> into the process before each task — that is what guarantees <code>migrate</code>, <code>psql</code>, and the API all agree on which database they are talking to.</p>
+
+  <figure class="code"><figcaption><span class="path">make.ps1</span><span class="tag new">new file</span></figcaption><pre><code>&lt;#
+.SYNOPSIS
+    Task runner for office360. Run  .\make.ps1 &lt;task&gt;
+#&gt;
+[CmdletBinding()]
+param(
+    [Parameter(Position = 0)]
+    [ValidateSet('up','down','nuke','migrate','rollback','sqlc','api','web','check','psql')]
+    [string]$Task = 'check'
+)
+
+$ErrorActionPreference = 'Stop'
+$Root = $PSScriptRoot
+
+function Import-DotEnv {
+    $envFile = Join-Path $Root '.env'
+    if (-not (Test-Path $envFile)) {
+        Write-Warning ".env not found — copying from .env.example"
+        Copy-Item (Join-Path $Root '.env.example') $envFile
+    }
+    Get-Content $envFile | ForEach-Object {
+        if ($_ -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') {
+            $name  = $Matches[1]
+            $value = $Matches[2].Trim().Trim('"')
+            Set-Item -Path "env:$name" -Value $value
+        }
+    }
+}
+
+function Assert-LastExit($what) {
+    if ($LASTEXITCODE -ne 0) { throw "$what failed (exit $LASTEXITCODE)" }
+}
+
+Import-DotEnv
+
+switch ($Task) {
+    'up' {
+        docker compose up -d
+        Assert-LastExit 'docker compose up'
+        Write-Host 'Waiting for Postgres to report healthy...' -ForegroundColor Cyan
+        $deadline = (Get-Date).AddSeconds(90)
+        do {
+            Start-Sleep -Seconds 2
+            $state = docker inspect -f '{{.State.Health.Status}}' office360-postgres 2&gt;$null
+        } while ($state -ne 'healthy' -and (Get-Date) -lt $deadline)
+        if ($state -ne 'healthy') { throw "Postgres did not become healthy (last state: '$state')" }
+        Write-Host "Postgres healthy on localhost:$($env:POSTGRES_PORT)" -ForegroundColor Green
+    }
+
+    'down' { docker compose down; Assert-LastExit 'docker compose down' }
+
+    'nuke' {
+        Write-Host 'This deletes the office360 Postgres volume and all local data.' -ForegroundColor Yellow
+        if ((Read-Host "Type 'yes' to continue") -ne 'yes') { Write-Host 'Aborted.'; break }
+        docker compose down -v
+        Assert-LastExit 'docker compose down -v'
+    }
+
+    'migrate' {
+        migrate -path api/db/migrations -database $env:DATABASE_URL up
+        Assert-LastExit 'migrate up'
+    }
+
+    'rollback' {
+        migrate -path api/db/migrations -database $env:DATABASE_URL down 1
+        Assert-LastExit 'migrate down'
+    }
+
+    'sqlc' {
+        Push-Location (Join-Path $Root 'api')
+        try { sqlc generate; Assert-LastExit 'sqlc generate' } finally { Pop-Location }
+        Write-Host 'Regenerated api/internal/db' -ForegroundColor Green
+    }
+
+    'api' {
+        Push-Location (Join-Path $Root 'api')
+        try { go run ./cmd/server } finally { Pop-Location }
+    }
+
+    'web' {
+        Push-Location (Join-Path $Root 'web')
+        try { npm run dev } finally { Pop-Location }
+    }
+
+    'check' {
+        Push-Location (Join-Path $Root 'api')
+        try {
+            go build ./...; Assert-LastExit 'go build'
+            go vet ./...;   Assert-LastExit 'go vet'
+        } finally { Pop-Location }
+
+        Push-Location (Join-Path $Root 'web')
+        try { npm run check; Assert-LastExit 'svelte-check' } finally { Pop-Location }
+
+        Write-Host 'All checks passed.' -ForegroundColor Green
+    }
+
+    'psql' {
+        docker exec -it office360-postgres psql -U $env:POSTGRES_USER -d $env:POSTGRES_DB
+    }
+}</code></pre></figure>
+
+  <aside class="note">
+    <p><strong><code>ValidateSet</code> gives you tab-completion for free</strong> — type <code>.\make.ps1 </code> and press Tab to cycle the available tasks. It also turns a typo into an immediate clear error rather than a silently skipped <code>switch</code>.</p>
+    <p><strong>Every task uses <code>Push-Location</code>/<code>Pop-Location</code> in a <code>try/finally</code></strong> so that interrupting <code>make.ps1 api</code> with Ctrl-C does not leave your shell stranded in <code>api/</code>.</p>
+  </aside>
+
+  <h3>Editor configuration</h3>
+
+  <figure class="code"><figcaption><span class="path">.vscode/extensions.json</span><span class="tag new">new file</span></figcaption><pre><code>{
+  "recommendations": [
+    "golang.go",
+    "svelte.svelte-vscode",
+    "ms-azuretools.vscode-docker",
+    "mtxr.sqltools",
+    "mtxr.sqltools-driver-pg",
+    "editorconfig.editorconfig"
+  ]
+}</code></pre></figure>
+
+  <figure class="code"><figcaption><span class="path">.vscode/settings.json</span><span class="tag new">new file</span></figcaption><pre><code>{
+  "go.lintTool": "golangci-lint",
+  "go.formatTool": "gofmt",
+  "[go]": {
+    "editor.defaultFormatter": "golang.go",
+    "editor.formatOnSave": true,
+    "editor.insertSpaces": false
+  },
+  "[svelte]": {
+    "editor.defaultFormatter": "svelte.svelte-vscode",
+    "editor.formatOnSave": true
+  },
+  "[typescript]": { "editor.formatOnSave": true },
+  "files.eol": "\n",
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.svelte-kit": true,
+    "web/package-lock.json": true
+  }
+}</code></pre></figure>
+
+  <figure class="code"><figcaption><span class="path">.vscode/tasks.json</span><span class="tag new">new file</span></figcaption><pre><code>{
+  "version": "2.0.0",
+  "options": {
+    "shell": {
+      "executable": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command"]
+    }
+  },
+  "tasks": [
+    { "label": "stack: up (postgres)", "type": "shell", "command": "./make.ps1 up",      "problemMatcher": [] },
+    { "label": "db: migrate",          "type": "shell", "command": "./make.ps1 migrate", "problemMatcher": [] },
+    { "label": "db: sqlc generate",    "type": "shell", "command": "./make.ps1 sqlc",    "problemMatcher": [] },
+    { "label": "api: run",             "type": "shell", "command": "./make.ps1 api", "isBackground": true, "problemMatcher": [] },
+    { "label": "web: run",             "type": "shell", "command": "./make.ps1 web", "isBackground": true, "problemMatcher": [] },
+    {
+      "label": "dev: api + web",
+      "dependsOn": ["api: run", "web: run"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
+      "label": "check: all",
+      "type": "shell",
+      "command": "./make.ps1 check",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    }
+  ]
+}</code></pre></figure>
+
+  <figure class="code"><figcaption><span class="path">.vscode/launch.json</span><span class="tag new">new file</span></figcaption><pre><code>{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug API",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/api/cmd/server",
+      "cwd": "${workspaceFolder}/api",
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}</code></pre></figure>
+
+  <aside class="note">
+    <p><strong>The <code>-ExecutionPolicy Bypass</code> in tasks.json avoids a common Windows dead end</strong> — the default policy blocks unsigned local scripts, so tasks would fail with a security error on a fresh machine. Setting it per-invocation keeps the machine-wide policy untouched.</p>
+    <p><code>envFile</code> in launch.json is why the debugger can reach the database: without it, <code>F5</code> starts the binary with no <code>DATABASE_URL</code> and it exits immediately.</p>
+  </aside>
+</section>
+
+<!-- ============ 10 ============ -->
+<section class="phase" id="p10">
+  <div class="num">10</div>
+  <h2>Project documentation</h2>
+  <p class="goal">A README for humans, a CLAUDE.md for AI tooling.</p>
+
+  <p>Write <code>README.md</code> covering the stack table, the directory layout, prerequisites, the first-run sequence, the task table, and the API route table.</p>
+
+  <p>Then <code>CLAUDE.md</code> at the repo root, which Claude Code reads automatically when a session opens in this folder. Keep it to what is <em>non-obvious</em> — do not restate what the code already shows. For this stack that means:</p>
+
+  <ul class="check">
+    <li>The sqlc loop and its ordering constraint (migration first, then query, then generate)</li>
+    <li>That <code>api/internal/db/</code> is generated and hand-edits are silently reverted</li>
+    <li>The SQLSTATE-to-4xx convention and where the pattern lives</li>
+    <li>Why the host port is 5433 — so nobody "fixes" it back into a collision</li>
+    <li>The single root <code>.env</code> and the <code>envDir: '..'</code> wiring</li>
+    <li>That git identity is per-repo here and must not move to <code>--global</code></li>
+    <li>Which command is the real gate before calling work done (<code>./make.ps1 check</code>)</li>
+  </ul>
+
+  <aside class="note warn">
+    <p><strong>A per-project CLAUDE.md matters more than it looks.</strong> Without one, a session opened in this folder can inherit conventions from a different project — including instructions to use MCP tools or knowledge graphs that do not exist here. An empty-but-accurate file beats an absent one.</p>
+  </aside>
+</section>
+
+<!-- ============ 11 ============ -->
+<section class="phase" id="p11">
+  <div class="num">11</div>
+  <h2>Connect to GitHub</h2>
+  <p class="goal">Commit, attach the remote, reconcile with whatever GitHub created.</p>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>git add -A
+git status --short</code></pre></figure>
+
+  <p>Read that list before committing. You should see roughly 45 files and <em>not</em> see <code>node_modules</code>, <code>.env</code>, <code>.svelte-kit</code>, or <code>package-lock.json</code> from anywhere but <code>web/</code>. If a secret or a build artefact is in there, fix <code>.gitignore</code> now — removing it after the first push is far more work.</p>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>git commit -m "Scaffold office360: Go/chi API, sqlc, Postgres 16, SvelteKit 2"
+git remote add origin https://Dhananjayan507@github.com/Dhananjayan507/office360.git</code></pre></figure>
+
+  <aside class="note">
+    <p><strong>Put the username in the remote URL.</strong> Windows Credential Manager keys stored credentials by host — so a plain <code>https://github.com/…</code> remote will reuse whatever GitHub token is already saved, which is the wrong account if you have more than one. Embedding <code>user@</code> makes the credential entry account-specific and keeps two identities on one machine from colliding.</p>
+  </aside>
+
+  <p>Now check whether the remote is genuinely empty. If you ticked "Add a README" when creating the repo, it is not, and a plain push will be rejected:</p>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>git ls-remote --heads origin</code></pre></figure>
+
+  <p>Any output means the remote already has commits. Fetch, inspect what is actually there, and rebase your work on top of it:</p>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>git fetch origin
+git log origin/main --oneline --stat
+git rebase origin/main</code></pre></figure>
+
+  <p>GitHub's auto-generated <code>README.md</code> will collide with yours. Resolve in favour of your version and continue:</p>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>git checkout --theirs README.md
+git add README.md
+git rebase --continue</code></pre></figure>
+
+  <aside class="note warn">
+    <p><strong>During a rebase, <code>--theirs</code> means your commit.</strong> This reverses the intuition: git is replaying your work onto the upstream branch, so "ours" is <code>origin/main</code> and "theirs" is the commit being applied. Reach for <code>--ours</code> here and you will silently keep GitHub's one-line placeholder and discard your README.</p>
+    <p>Rebase rather than force-push. <code>git push --force</code> would work too, but it destroys the remote's commit — fine for a placeholder, disastrous if you misread the situation and someone else's work was there.</p>
+  </aside>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>git push -u origin main</code></pre></figure>
+
+  <p>Credential Manager opens a window on the first push. Choose <strong>Sign in with your browser</strong> and authenticate as the account that owns the repo — simpler than a token and it does not expire. If you prefer a Personal Access Token, it needs <em>Contents: Read and write</em> on this repository.</p>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>git log -1 --format="%an &lt;%ae&gt;"</code></pre></figure>
+
+  <p>Confirm that prints the identity you set in step 02, not your other account.</p>
+</section>
+
+<!-- ============ 12 ============ -->
+<section class="phase last" id="p12">
+  <div class="num">12</div>
+  <h2>First run</h2>
+  <p class="goal">Database up, schema applied, both servers live.</p>
+
+  <figure class="code sh"><figcaption><span class="path">PowerShell · repo root</span></figcaption><pre><code>./make.ps1 up
+./make.ps1 migrate</code></pre></figure>
+
+  <p>Then the API in one terminal and the web app in another — both block, so they need separate windows:</p>
+
+  <figure class="code sh"><figcaption><span class="path">Terminal 1</span></figcaption><pre><code>./make.ps1 api</code></pre></figure>
+
+  <figure class="code sh"><figcaption><span class="path">Terminal 2</span></figcaption><pre><code>./make.ps1 web</code></pre></figure>
+
+  <p>Verify the whole path — database through API through browser:</p>
+
+  <figure class="code sh"><figcaption><span class="path">Terminal 3</span></figcaption><pre><code>curl http://localhost:8080/healthz</code></pre></figure>
+
+  <figure class="code sh"><figcaption><span class="path">Terminal 3</span></figcaption><pre><code>curl -X POST http://localhost:8080/api/v1/employees -H "Content-Type: application/json" -d "{\"full_name\":\"Ada Lovelace\",\"email\":\"ada@office360.dev\"}"</code></pre></figure>
+
+  <aside class="note ok">
+    <p><strong>Done.</strong> <code>/healthz</code> returns <code>{"status":"ok","db":"up","env":"development"}</code>, the POST returns 201 with a generated UUID, and <a href="http://localhost:5173">localhost:5173</a> shows Ada in the table. Repeat the POST and you should get <code>409</code> with a duplicate-email message — that confirms the SQLSTATE mapping is wired correctly.</p>
+  </aside>
+</section>
+
+<hr class="rule">
+
+<!-- ============ reuse ============ -->
+<section id="reuse">
+  <h2>Reusing this for a new project</h2>
+  <p class="lede">Everything above generalises. Here is what actually changes per project, and what is safe to copy untouched.</p>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th>File</th><th>What to change</th></tr></thead>
+      <tbody>
+        <tr><td><code>.gitignore</code></td><td>Nothing — copy as is.</td></tr>
+        <tr><td><code>.editorconfig</code></td><td>Nothing — copy as is.</td></tr>
+        <tr><td><code>.env.example</code></td><td>Database name, user, password, and a host port no other stack owns.</td></tr>
+        <tr><td><code>docker-compose.yml</code></td><td><code>container_name</code>, the volume name, and the default port. Three edits.</td></tr>
+        <tr><td><code>api/go.mod</code></td><td>Module path — <code>github.com/&lt;user&gt;/&lt;repo&gt;/api</code>.</td></tr>
+        <tr><td>Go imports</td><td>Every <code>internal/</code> import line follows the module path. Find-and-replace once, early.</td></tr>
+        <tr><td><code>api/sqlc.yaml</code></td><td>Nothing — the overrides are stack-level, not project-level.</td></tr>
+        <tr><td><code>api/db/</code></td><td>Everything. This is your actual domain.</td></tr>
+        <tr><td><code>internal/httpapi/</code></td><td><code>respond.go</code> and <code>server.go</code>'s skeleton carry over; handlers are per-domain.</td></tr>
+        <tr><td><code>internal/config/</code></td><td>Nothing, unless you add config keys.</td></tr>
+        <tr><td><code>cmd/server/main.go</code></td><td>Only the two import paths.</td></tr>
+        <tr><td><code>make.ps1</code></td><td>The container name in <code>up</code> and <code>psql</code>. Two lines.</td></tr>
+        <tr><td><code>.vscode/</code></td><td>Nothing — copy as is.</td></tr>
+        <tr><td><code>README.md</code> / <code>CLAUDE.md</code></td><td>Rewrite for the new domain.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>The short version</h3>
+  <ol class="plain">
+    <li>Copy the whole folder, delete <code>.git</code>, <code>node_modules</code>, <code>.svelte-kit</code>, and <code>api/internal/db</code>.</li>
+    <li><code>git init -b main</code> and set the local identity (step 02).</li>
+    <li>Find-and-replace the module path and the project name across the tree.</li>
+    <li>Replace <code>api/db/migrations</code> and <code>api/db/query</code> with your own domain.</li>
+    <li><code>sqlc generate</code>, then write handlers against whatever it produced.</li>
+    <li>Point <code>web/src/lib/types.ts</code> at the new shapes.</li>
+    <li><code>./make.ps1 check</code>, commit, attach the remote, push.</li>
+  </ol>
+</section>
+
+<!-- ============ traps ============ -->
+<section id="traps">
+  <h2>Traps worth knowing</h2>
+  <p class="lede">Each of these costs an hour if you meet it without warning.</p>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Symptom</th><th>Cause and fix</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>sqlc errors on a column that exists</td>
+          <td>It reads migrations, not your live database. Write the migration file first; applying it is a separate step.</td>
+        </tr>
+        <tr>
+          <td>Generated struct fields in the wrong order</td>
+          <td><code>$1</code> mixed with <code>sqlc.arg()</code> in one query. Use named parameters throughout.</td>
+        </tr>
+        <tr>
+          <td>sqlc cannot infer a parameter type</td>
+          <td>Add an explicit cast — <code>sqlc.narg('x')::text</code>.</td>
+        </tr>
+        <tr>
+          <td>Your edits to <code>internal/db</code> vanished</td>
+          <td>It is generated. Change the <code>.sql</code> file and regenerate.</td>
+        </tr>
+        <tr>
+          <td>JSON full of <code>{"Valid":true}</code> wrappers</td>
+          <td>Missing type overrides in <code>sqlc.yaml</code>.</td>
+        </tr>
+        <tr>
+          <td><code>migrate</code>: unknown driver postgres</td>
+          <td>Installed without <code>-tags 'postgres'</code>. Reinstall with it.</td>
+        </tr>
+        <tr>
+          <td>Port 5432 already allocated</td>
+          <td>Another Postgres container owns it. That is why this project uses 5433.</td>
+        </tr>
+        <tr>
+          <td>API starts, dies on first request</td>
+          <td><code>pgxpool.New</code> connects lazily. The explicit <code>Ping</code> at boot is what surfaces it.</td>
+        </tr>
+        <tr>
+          <td>Migration fails right after <code>up</code></td>
+          <td>Racing the container. Wait on the health check, not a fixed sleep.</td>
+        </tr>
+        <tr>
+          <td><code>PUBLIC_API_URL</code> undefined in the browser</td>
+          <td>Vite loads env from <code>web/</code>. Set <code>envDir: '..'</code>.</td>
+        </tr>
+        <tr>
+          <td>CORS error in the browser console</td>
+          <td>The dev origin is missing from <code>CORS_ORIGINS</code>.</td>
+        </tr>
+        <tr>
+          <td>Commits attributed to the wrong account</td>
+          <td>Identity set globally. Set it per-repo and put the username in the remote URL.</td>
+        </tr>
+        <tr>
+          <td>Push rejected, non-fast-forward</td>
+          <td>GitHub created a README. Fetch and rebase; take <code>--theirs</code> on the conflict.</td>
+        </tr>
+        <tr>
+          <td><code>go mod edit -go=1.23.0</code> rejected</td>
+          <td>Go 1.27 wants the space form: <code>go mod edit -go 1.23.0</code>.</td>
+        </tr>
+        <tr>
+          <td><code>sv create</code> hangs</td>
+          <td>Interactive by default. Pass <code>--template</code>, <code>--types</code>, <code>--no-add-ons</code>, <code>--install</code>.</td>
+        </tr>
+        <tr>
+          <td>VS Code task: script not digitally signed</td>
+          <td>Execution policy. <code>tasks.json</code> passes <code>-ExecutionPolicy Bypass</code> per invocation.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="foot">Verified on this machine at each checkpoint except step 12, which needs Docker running. Steps 01–11 were executed end to end; <code>go build</code>, <code>go vet</code>, <code>sqlc generate</code>, and <code>svelte-check</code> all pass.</p>
+</section>
+
+</div>
+</body>
+</html>
