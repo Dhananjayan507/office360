@@ -11,19 +11,30 @@ import (
 )
 
 type Department struct {
-	ID        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
+	ID             uuid.UUID `json:"id"`
+	Name           string    `json:"name"`
+	CreatedAt      time.Time `json:"created_at"`
+	OrganizationID uuid.UUID `json:"organization_id"`
 }
 
 type Employee struct {
-	ID           uuid.UUID  `json:"id"`
-	DepartmentID *uuid.UUID `json:"department_id"`
-	FullName     string     `json:"full_name"`
-	Email        string     `json:"email"`
-	Title        *string    `json:"title"`
-	Status       string     `json:"status"`
-	HiredOn      *time.Time `json:"hired_on"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
+	ID             uuid.UUID  `json:"id"`
+	DepartmentID   *uuid.UUID `json:"department_id"`
+	FullName       string     `json:"full_name"`
+	Email          string     `json:"email"`
+	Title          *string    `json:"title"`
+	Status         string     `json:"status"`
+	HiredOn        *time.Time `json:"hired_on"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+}
+
+type Organization struct {
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	Slug      string    `json:"slug"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }

@@ -1,22 +1,29 @@
+-- Every query is scoped by organization_id, including the writes: an UPDATE or
+-- DELETE that matched on id alone would reach across tenants.
+
 -- name: ListEmployees :many
 SELECT * FROM employees
-WHERE (sqlc.narg('department_id')::uuid IS NULL OR department_id = sqlc.narg('department_id')::uuid)
+WHERE organization_id = sqlc.arg('organization_id')::uuid
+  AND (sqlc.narg('department_id')::uuid IS NULL OR department_id = sqlc.narg('department_id')::uuid)
   AND (sqlc.narg('status')::text IS NULL OR status = sqlc.narg('status')::text)
 ORDER BY full_name
 LIMIT sqlc.arg('limit')::int OFFSET sqlc.arg('offset')::int;
 
 -- name: CountEmployees :one
 SELECT count(*) FROM employees
-WHERE (sqlc.narg('department_id')::uuid IS NULL OR department_id = sqlc.narg('department_id')::uuid)
+WHERE organization_id = sqlc.arg('organization_id')::uuid
+  AND (sqlc.narg('department_id')::uuid IS NULL OR department_id = sqlc.narg('department_id')::uuid)
   AND (sqlc.narg('status')::text IS NULL OR status = sqlc.narg('status')::text);
 
 -- name: GetEmployee :one
 SELECT * FROM employees
-WHERE id = sqlc.arg('id')::uuid;
+WHERE organization_id = sqlc.arg('organization_id')::uuid
+  AND id = sqlc.arg('id')::uuid;
 
 -- name: CreateEmployee :one
-INSERT INTO employees (department_id, full_name, email, title, status, hired_on)
+INSERT INTO employees (organization_id, department_id, full_name, email, title, status, hired_on)
 VALUES (
+    sqlc.arg('organization_id')::uuid,
     sqlc.narg('department_id')::uuid,
     sqlc.arg('full_name')::text,
     sqlc.arg('email')::text,
@@ -35,9 +42,11 @@ SET department_id = coalesce(sqlc.narg('department_id')::uuid, department_id),
     status        = coalesce(sqlc.narg('status')::text, status),
     hired_on      = coalesce(sqlc.narg('hired_on')::date, hired_on),
     updated_at    = now()
-WHERE id = sqlc.arg('id')::uuid
+WHERE organization_id = sqlc.arg('organization_id')::uuid
+  AND id = sqlc.arg('id')::uuid
 RETURNING *;
 
 -- name: DeleteEmployee :execrows
 DELETE FROM employees
-WHERE id = sqlc.arg('id')::uuid;
+WHERE organization_id = sqlc.arg('organization_id')::uuid
+  AND id = sqlc.arg('id')::uuid;

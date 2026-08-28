@@ -4,11 +4,17 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Dhananjayan507/office360/internal/db"
 	"github.com/Dhananjayan507/office360/internal/httpx"
 )
 
 func (s *Server) listDepartments(w http.ResponseWriter, r *http.Request) error {
-	rows, err := s.q.ListDepartments(r.Context())
+	org, err := currentOrganization(r)
+	if err != nil {
+		return err
+	}
+
+	rows, err := s.q.ListDepartments(r.Context(), org)
 	if err != nil {
 		return httpx.Internal(err)
 	}
@@ -22,6 +28,11 @@ type createDepartmentRequest struct {
 }
 
 func (s *Server) createDepartment(w http.ResponseWriter, r *http.Request) error {
+	org, err := currentOrganization(r)
+	if err != nil {
+		return err
+	}
+
 	var body createDepartmentRequest
 	if err := httpx.Decode(w, r, &body); err != nil {
 		return err
@@ -32,7 +43,10 @@ func (s *Server) createDepartment(w http.ResponseWriter, r *http.Request) error 
 		return httpx.Validation("name is required", map[string]string{"name": "required"})
 	}
 
-	department, err := s.q.CreateDepartment(r.Context(), body.Name)
+	department, err := s.q.CreateDepartment(r.Context(), db.CreateDepartmentParams{
+		OrganizationID: org,
+		Name:           body.Name,
+	})
 	if pgCode(err) == "23505" {
 		return httpx.Conflict("a department with that name already exists").
 			WithCode("department.name_taken")
@@ -45,15 +59,26 @@ func (s *Server) createDepartment(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (s *Server) deleteDepartment(w http.ResponseWriter, r *http.Request) error {
+	org, err := currentOrganization(r)
+	if err != nil {
+		return err
+	}
+
 	id, err := pathUUID(r)
 	if err != nil {
 		return err
 	}
 
-	rows, err := s.q.DeleteDepartment(r.Context(), id)
+	rows, err := s.q.DeleteDepartment(r.Context(), db.DeleteDepartmentParams{
+		OrganizationID: org,
+		ID:             id,
+	})
 	if err != nil {
 		return httpx.Internal(err)
 	}
+	// Zero rows means it does not exist *for this organisation*. A department in
+	// another tenant lands here too, and must stay a 404 — a 403 would confirm
+	// the id is real.
 	if rows == 0 {
 		return httpx.NotFound("department not found")
 	}

@@ -43,13 +43,26 @@ function baseUrl(): string {
 	return (env.PUBLIC_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
 }
 
+/**
+ * Identifies the organisation every request acts within.
+ *
+ * INTERIM, and the mirror of `currentOrganization` in `internal/httpapi/tenant.go`.
+ * Day 3 adds login and Day 4 moves this onto the session token; at that point the
+ * header disappears from here and `PUBLIC_DEV_ORGANIZATION_ID` leaves `.env`.
+ * The API fails closed, so with no value configured every call returns 401.
+ */
+function tenantHeaders(): Record<string, string> {
+	const org = env.PUBLIC_DEV_ORGANIZATION_ID;
+	return org ? { 'X-Organization-Id': org } : {};
+}
+
 async function request<T>(
 	path: string,
 	{ fetch: doFetch = globalThis.fetch, ...init }: RequestInit & Options = {}
 ): Promise<Envelope<T>> {
 	const res = await doFetch(`${baseUrl()}${path}`, {
 		...init,
-		headers: { 'Content-Type': 'application/json', ...init.headers }
+		headers: { 'Content-Type': 'application/json', ...tenantHeaders(), ...init.headers }
 	});
 
 	if (res.status === 204) return { data: undefined as T, meta: {} };

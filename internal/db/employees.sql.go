@@ -14,46 +14,51 @@ import (
 
 const countEmployees = `-- name: CountEmployees :one
 SELECT count(*) FROM employees
-WHERE ($1::uuid IS NULL OR department_id = $1::uuid)
-  AND ($2::text IS NULL OR status = $2::text)
+WHERE organization_id = $1::uuid
+  AND ($2::uuid IS NULL OR department_id = $2::uuid)
+  AND ($3::text IS NULL OR status = $3::text)
 `
 
 type CountEmployeesParams struct {
-	DepartmentID *uuid.UUID `json:"department_id"`
-	Status       *string    `json:"status"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	DepartmentID   *uuid.UUID `json:"department_id"`
+	Status         *string    `json:"status"`
 }
 
 func (q *Queries) CountEmployees(ctx context.Context, arg CountEmployeesParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countEmployees, arg.DepartmentID, arg.Status)
+	row := q.db.QueryRow(ctx, countEmployees, arg.OrganizationID, arg.DepartmentID, arg.Status)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
 const createEmployee = `-- name: CreateEmployee :one
-INSERT INTO employees (department_id, full_name, email, title, status, hired_on)
+INSERT INTO employees (organization_id, department_id, full_name, email, title, status, hired_on)
 VALUES (
     $1::uuid,
-    $2::text,
+    $2::uuid,
     $3::text,
     $4::text,
-    coalesce($5::text, 'active'),
-    $6::date
+    $5::text,
+    coalesce($6::text, 'active'),
+    $7::date
 )
-RETURNING id, department_id, full_name, email, title, status, hired_on, created_at, updated_at
+RETURNING id, department_id, full_name, email, title, status, hired_on, created_at, updated_at, organization_id
 `
 
 type CreateEmployeeParams struct {
-	DepartmentID *uuid.UUID `json:"department_id"`
-	FullName     string     `json:"full_name"`
-	Email        string     `json:"email"`
-	Title        *string    `json:"title"`
-	Status       *string    `json:"status"`
-	HiredOn      *time.Time `json:"hired_on"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	DepartmentID   *uuid.UUID `json:"department_id"`
+	FullName       string     `json:"full_name"`
+	Email          string     `json:"email"`
+	Title          *string    `json:"title"`
+	Status         *string    `json:"status"`
+	HiredOn        *time.Time `json:"hired_on"`
 }
 
 func (q *Queries) CreateEmployee(ctx context.Context, arg CreateEmployeeParams) (Employee, error) {
 	row := q.db.QueryRow(ctx, createEmployee,
+		arg.OrganizationID,
 		arg.DepartmentID,
 		arg.FullName,
 		arg.Email,
@@ -72,17 +77,24 @@ func (q *Queries) CreateEmployee(ctx context.Context, arg CreateEmployeeParams) 
 		&i.HiredOn,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OrganizationID,
 	)
 	return i, err
 }
 
 const deleteEmployee = `-- name: DeleteEmployee :execrows
 DELETE FROM employees
-WHERE id = $1::uuid
+WHERE organization_id = $1::uuid
+  AND id = $2::uuid
 `
 
-func (q *Queries) DeleteEmployee(ctx context.Context, id uuid.UUID) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteEmployee, id)
+type DeleteEmployeeParams struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	ID             uuid.UUID `json:"id"`
+}
+
+func (q *Queries) DeleteEmployee(ctx context.Context, arg DeleteEmployeeParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteEmployee, arg.OrganizationID, arg.ID)
 	if err != nil {
 		return 0, err
 	}
@@ -90,12 +102,18 @@ func (q *Queries) DeleteEmployee(ctx context.Context, id uuid.UUID) (int64, erro
 }
 
 const getEmployee = `-- name: GetEmployee :one
-SELECT id, department_id, full_name, email, title, status, hired_on, created_at, updated_at FROM employees
-WHERE id = $1::uuid
+SELECT id, department_id, full_name, email, title, status, hired_on, created_at, updated_at, organization_id FROM employees
+WHERE organization_id = $1::uuid
+  AND id = $2::uuid
 `
 
-func (q *Queries) GetEmployee(ctx context.Context, id uuid.UUID) (Employee, error) {
-	row := q.db.QueryRow(ctx, getEmployee, id)
+type GetEmployeeParams struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	ID             uuid.UUID `json:"id"`
+}
+
+func (q *Queries) GetEmployee(ctx context.Context, arg GetEmployeeParams) (Employee, error) {
+	row := q.db.QueryRow(ctx, getEmployee, arg.OrganizationID, arg.ID)
 	var i Employee
 	err := row.Scan(
 		&i.ID,
@@ -107,27 +125,34 @@ func (q *Queries) GetEmployee(ctx context.Context, id uuid.UUID) (Employee, erro
 		&i.HiredOn,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OrganizationID,
 	)
 	return i, err
 }
 
 const listEmployees = `-- name: ListEmployees :many
-SELECT id, department_id, full_name, email, title, status, hired_on, created_at, updated_at FROM employees
-WHERE ($1::uuid IS NULL OR department_id = $1::uuid)
-  AND ($2::text IS NULL OR status = $2::text)
+
+SELECT id, department_id, full_name, email, title, status, hired_on, created_at, updated_at, organization_id FROM employees
+WHERE organization_id = $1::uuid
+  AND ($2::uuid IS NULL OR department_id = $2::uuid)
+  AND ($3::text IS NULL OR status = $3::text)
 ORDER BY full_name
-LIMIT $4::int OFFSET $3::int
+LIMIT $5::int OFFSET $4::int
 `
 
 type ListEmployeesParams struct {
-	DepartmentID *uuid.UUID `json:"department_id"`
-	Status       *string    `json:"status"`
-	Offset       int32      `json:"offset"`
-	Limit        int32      `json:"limit"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	DepartmentID   *uuid.UUID `json:"department_id"`
+	Status         *string    `json:"status"`
+	Offset         int32      `json:"offset"`
+	Limit          int32      `json:"limit"`
 }
 
+// Every query is scoped by organization_id, including the writes: an UPDATE or
+// DELETE that matched on id alone would reach across tenants.
 func (q *Queries) ListEmployees(ctx context.Context, arg ListEmployeesParams) ([]Employee, error) {
 	rows, err := q.db.Query(ctx, listEmployees,
+		arg.OrganizationID,
 		arg.DepartmentID,
 		arg.Status,
 		arg.Offset,
@@ -150,6 +175,7 @@ func (q *Queries) ListEmployees(ctx context.Context, arg ListEmployeesParams) ([
 			&i.HiredOn,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OrganizationID,
 		); err != nil {
 			return nil, err
 		}
@@ -170,18 +196,20 @@ SET department_id = coalesce($1::uuid, department_id),
     status        = coalesce($5::text, status),
     hired_on      = coalesce($6::date, hired_on),
     updated_at    = now()
-WHERE id = $7::uuid
-RETURNING id, department_id, full_name, email, title, status, hired_on, created_at, updated_at
+WHERE organization_id = $7::uuid
+  AND id = $8::uuid
+RETURNING id, department_id, full_name, email, title, status, hired_on, created_at, updated_at, organization_id
 `
 
 type UpdateEmployeeParams struct {
-	DepartmentID *uuid.UUID `json:"department_id"`
-	FullName     *string    `json:"full_name"`
-	Email        *string    `json:"email"`
-	Title        *string    `json:"title"`
-	Status       *string    `json:"status"`
-	HiredOn      *time.Time `json:"hired_on"`
-	ID           uuid.UUID  `json:"id"`
+	DepartmentID   *uuid.UUID `json:"department_id"`
+	FullName       *string    `json:"full_name"`
+	Email          *string    `json:"email"`
+	Title          *string    `json:"title"`
+	Status         *string    `json:"status"`
+	HiredOn        *time.Time `json:"hired_on"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	ID             uuid.UUID  `json:"id"`
 }
 
 func (q *Queries) UpdateEmployee(ctx context.Context, arg UpdateEmployeeParams) (Employee, error) {
@@ -192,6 +220,7 @@ func (q *Queries) UpdateEmployee(ctx context.Context, arg UpdateEmployeeParams) 
 		arg.Title,
 		arg.Status,
 		arg.HiredOn,
+		arg.OrganizationID,
 		arg.ID,
 	)
 	var i Employee
@@ -205,6 +234,7 @@ func (q *Queries) UpdateEmployee(ctx context.Context, arg UpdateEmployeeParams) 
 		&i.HiredOn,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OrganizationID,
 	)
 	return i, err
 }

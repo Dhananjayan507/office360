@@ -12,25 +12,41 @@ import (
 )
 
 const createDepartment = `-- name: CreateDepartment :one
-INSERT INTO departments (name)
-VALUES ($1)
-RETURNING id, name, created_at
+INSERT INTO departments (organization_id, name)
+VALUES ($1::uuid, $2::text)
+RETURNING id, name, created_at, organization_id
 `
 
-func (q *Queries) CreateDepartment(ctx context.Context, name string) (Department, error) {
-	row := q.db.QueryRow(ctx, createDepartment, name)
+type CreateDepartmentParams struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Name           string    `json:"name"`
+}
+
+func (q *Queries) CreateDepartment(ctx context.Context, arg CreateDepartmentParams) (Department, error) {
+	row := q.db.QueryRow(ctx, createDepartment, arg.OrganizationID, arg.Name)
 	var i Department
-	err := row.Scan(&i.ID, &i.Name, &i.CreatedAt)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.OrganizationID,
+	)
 	return i, err
 }
 
 const deleteDepartment = `-- name: DeleteDepartment :execrows
 DELETE FROM departments
-WHERE id = $1
+WHERE organization_id = $1::uuid
+  AND id = $2::uuid
 `
 
-func (q *Queries) DeleteDepartment(ctx context.Context, id uuid.UUID) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteDepartment, id)
+type DeleteDepartmentParams struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	ID             uuid.UUID `json:"id"`
+}
+
+func (q *Queries) DeleteDepartment(ctx context.Context, arg DeleteDepartmentParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteDepartment, arg.OrganizationID, arg.ID)
 	if err != nil {
 		return 0, err
 	}
@@ -38,24 +54,39 @@ func (q *Queries) DeleteDepartment(ctx context.Context, id uuid.UUID) (int64, er
 }
 
 const getDepartment = `-- name: GetDepartment :one
-SELECT id, name, created_at FROM departments
-WHERE id = $1
+SELECT id, name, created_at, organization_id FROM departments
+WHERE organization_id = $1::uuid
+  AND id = $2::uuid
 `
 
-func (q *Queries) GetDepartment(ctx context.Context, id uuid.UUID) (Department, error) {
-	row := q.db.QueryRow(ctx, getDepartment, id)
+type GetDepartmentParams struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	ID             uuid.UUID `json:"id"`
+}
+
+func (q *Queries) GetDepartment(ctx context.Context, arg GetDepartmentParams) (Department, error) {
+	row := q.db.QueryRow(ctx, getDepartment, arg.OrganizationID, arg.ID)
 	var i Department
-	err := row.Scan(&i.ID, &i.Name, &i.CreatedAt)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.OrganizationID,
+	)
 	return i, err
 }
 
 const listDepartments = `-- name: ListDepartments :many
-SELECT id, name, created_at FROM departments
+
+SELECT id, name, created_at, organization_id FROM departments
+WHERE organization_id = $1::uuid
 ORDER BY name
 `
 
-func (q *Queries) ListDepartments(ctx context.Context) ([]Department, error) {
-	rows, err := q.db.Query(ctx, listDepartments)
+// Every query is scoped by organization_id. A query without it is a
+// cross-tenant leak, so there are no unscoped variants to reach for by mistake.
+func (q *Queries) ListDepartments(ctx context.Context, organizationID uuid.UUID) ([]Department, error) {
+	rows, err := q.db.Query(ctx, listDepartments, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +94,12 @@ func (q *Queries) ListDepartments(ctx context.Context) ([]Department, error) {
 	items := []Department{}
 	for rows.Next() {
 		var i Department
-		if err := rows.Scan(&i.ID, &i.Name, &i.CreatedAt); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.OrganizationID,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

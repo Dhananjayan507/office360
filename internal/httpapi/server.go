@@ -14,16 +14,20 @@ import (
 	"github.com/Dhananjayan507/office360/internal/config"
 	"github.com/Dhananjayan507/office360/internal/db"
 	"github.com/Dhananjayan507/office360/internal/httpx"
+	"github.com/Dhananjayan507/office360/internal/platform/txn"
 )
 
 type Server struct {
-	cfg  config.Config
-	pool *pgxpool.Pool
-	q    *db.Queries
+	cfg config.Config
+	txn *txn.Manager
+	// q is the non-transactional query set, for handlers whose work is a single
+	// statement. Anything spanning more than one goes through s.txn.
+	q *db.Queries
 }
 
 func NewServer(cfg config.Config, pool *pgxpool.Pool) *Server {
-	return &Server{cfg: cfg, pool: pool, q: db.New(pool)}
+	manager := txn.New(pool)
+	return &Server{cfg: cfg, txn: manager, q: manager.Queries()}
 }
 
 func (s *Server) Routes() http.Handler {
@@ -39,7 +43,7 @@ func (s *Server) Routes() http.Handler {
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   s.cfg.CORSOrigins,
 		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodDelete, http.MethodOptions},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", DevOrganizationHeader},
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))

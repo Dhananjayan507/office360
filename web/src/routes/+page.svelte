@@ -1,9 +1,21 @@
 <script lang="ts">
+	import { env } from '$env/dynamic/public';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
 	const byId = $derived(new Map(data.departments.map((d) => [d.id, d.name])));
+
+	// Built as one string rather than written inline: `code` is `pre-wrap`, so
+	// markup indentation would be copied along with the command and break it.
+	// The organisation is read from the environment so the command shown is the
+	// one that actually works here.
+	const orgId = env.PUBLIC_DEV_ORGANIZATION_ID ?? '<PUBLIC_DEV_ORGANIZATION_ID>';
+	const seedCommand =
+		'Invoke-RestMethod -Uri http://localhost:8080/api/v1/employees -Method Post' +
+		" -ContentType 'application/json'" +
+		` -Headers @{'X-Organization-Id' = '${orgId}'}` +
+		' -Body \'{"full_name":"Ada Lovelace","email":"ada@office360.dev"}\'';
 
 	const statusLabels: Record<string, string> = {
 		active: 'Active',
@@ -23,15 +35,17 @@
 	<div class="notice">
 		<strong>Can't reach the API.</strong>
 		<span>{data.apiError}</span>
-		<code>docker compose up -d &amp;&amp; cd api &amp;&amp; go run ./cmd/server</code>
+		<code>./make.ps1 up</code>
+		<code>./make.ps1 api</code>
 	</div>
 {:else if data.employees.length === 0}
 	<div class="empty">
 		<p>No employees yet.</p>
-		<code
-			>curl -X POST http://localhost:8080/api/v1/employees -H "Content-Type: application/json" -d
-			'&#123;"full_name":"Ada Lovelace","email":"ada@office360.dev"&#125;'</code
+		<span
+			>Every <em>/api/v1</em> call carries an <em>X-Organization-Id</em> header until login arrives
+			on Day 3 — by hand as well as from this page.</span
 		>
+		<code>{seedCommand}</code>
 	</div>
 {:else}
 	<table>
@@ -86,9 +100,16 @@
 		color: var(--danger);
 	}
 
-	.notice span {
+	.notice span,
+	.empty span {
 		color: var(--muted);
 		font-size: 0.9rem;
+	}
+
+	.empty em {
+		font-style: normal;
+		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+		color: var(--text);
 	}
 
 	code {

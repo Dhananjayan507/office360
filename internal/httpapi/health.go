@@ -29,7 +29,7 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) error {
 	body := healthBody{Status: "ok", DB: "up", Env: s.cfg.Env}
 	status := http.StatusOK
 
-	if err := s.pool.Ping(ctx); err != nil {
+	if err := s.txn.Pool().Ping(ctx); err != nil {
 		body.Status, body.DB = "degraded", "down"
 		status = http.StatusServiceUnavailable
 	}

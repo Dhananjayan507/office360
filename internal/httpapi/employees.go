@@ -24,6 +24,11 @@ var employeeStatuses = map[string]bool{"active": true, "on_leave": true, "exited
 const statusMessage = "status must be one of: active, on_leave, exited"
 
 func (s *Server) listEmployees(w http.ResponseWriter, r *http.Request) error {
+	org, err := currentOrganization(r)
+	if err != nil {
+		return err
+	}
+
 	q := r.URL.Query()
 
 	departmentID, err := optionalUUIDParam(q.Get("department_id"), "department_id")
@@ -42,19 +47,33 @@ func (s *Server) listEmployees(w http.ResponseWriter, r *http.Request) error {
 	limit := intParam(q.Get("limit"), defaultLimit, 1, maxLimit)
 	offset := intParam(q.Get("offset"), 0, 0, 1<<30)
 
-	rows, err := s.q.ListEmployees(r.Context(), db.ListEmployeesParams{
-		DepartmentID: departmentID,
-		Status:       status,
-		Limit:        limit,
-		Offset:       offset,
-	})
-	if err != nil {
-		return httpx.Internal(err)
-	}
+	var (
+		rows  []db.Employee
+		total int64
+	)
 
-	total, err := s.q.CountEmployees(r.Context(), db.CountEmployeesParams{
-		DepartmentID: departmentID,
-		Status:       status,
+	// The page and its total have to agree. Run as one read-only transaction so
+	// a row inserted between the two statements cannot produce a total that does
+	// not match the rows returned beside it.
+	err = s.txn.InReadOnlyTx(r.Context(), func(tq *db.Queries) error {
+		var err error
+		rows, err = tq.ListEmployees(r.Context(), db.ListEmployeesParams{
+			OrganizationID: org,
+			DepartmentID:   departmentID,
+			Status:         status,
+			Limit:          limit,
+			Offset:         offset,
+		})
+		if err != nil {
+			return err
+		}
+
+		total, err = tq.CountEmployees(r.Context(), db.CountEmployeesParams{
+			OrganizationID: org,
+			DepartmentID:   departmentID,
+			Status:         status,
+		})
+		return err
 	})
 	if err != nil {
 		return httpx.Internal(err)
@@ -64,12 +83,23 @@ func (s *Server) listEmployees(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (s *Server) getEmployee(w http.ResponseWriter, r *http.Request) error {
+	org, err := currentOrganization(r)
+	if err != nil {
+		return err
+	}
+
 	id, err := pathUUID(r)
 	if err != nil {
 		return err
 	}
 
-	employee, err := s.q.GetEmployee(r.Context(), id)
+	employee, err := s.q.GetEmployee(r.Context(), db.GetEmployeeParams{
+		OrganizationID: org,
+		ID:             id,
+	})
+	// An employee belonging to another organisation misses the scoped WHERE and
+	// arrives here as ErrNoRows — a 404, never a 403, so the response cannot
+	// confirm that the id exists somewhere else.
 	if errors.Is(err, pgx.ErrNoRows) {
 		return httpx.NotFound("employee not found")
 	}
@@ -90,6 +120,11 @@ type createEmployeeRequest struct {
 }
 
 func (s *Server) createEmployee(w http.ResponseWriter, r *http.Request) error {
+	org, err := currentOrganization(r)
+	if err != nil {
+		return err
+	}
+
 	var body createEmployeeRequest
 	if err := httpx.Decode(w, r, &body); err != nil {
 		return err
@@ -113,12 +148,13 @@ func (s *Server) createEmployee(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	employee, err := s.q.CreateEmployee(r.Context(), db.CreateEmployeeParams{
-		DepartmentID: body.DepartmentID,
-		FullName:     body.FullName,
-		Email:        body.Email,
-		Title:        body.Title,
-		Status:       body.Status,
-		HiredOn:      body.HiredOn.timePtr(),
+		OrganizationID: org,
+		DepartmentID:   body.DepartmentID,
+		FullName:       body.FullName,
+		Email:          body.Email,
+		Title:          body.Title,
+		Status:         body.Status,
+		HiredOn:        body.HiredOn.timePtr(),
 	})
 	if err != nil {
 		if ce := constraintError(err); ce != nil {
@@ -140,6 +176,11 @@ type updateEmployeeRequest struct {
 }
 
 func (s *Server) updateEmployee(w http.ResponseWriter, r *http.Request) error {
+	org, err := currentOrganization(r)
+	if err != nil {
+		return err
+	}
+
 	id, err := pathUUID(r)
 	if err != nil {
 		return err
@@ -154,13 +195,14 @@ func (s *Server) updateEmployee(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	employee, err := s.q.UpdateEmployee(r.Context(), db.UpdateEmployeeParams{
-		ID:           id,
-		DepartmentID: body.DepartmentID,
-		FullName:     body.FullName,
-		Email:        body.Email,
-		Title:        body.Title,
-		Status:       body.Status,
-		HiredOn:      body.HiredOn.timePtr(),
+		OrganizationID: org,
+		ID:             id,
+		DepartmentID:   body.DepartmentID,
+		FullName:       body.FullName,
+		Email:          body.Email,
+		Title:          body.Title,
+		Status:         body.Status,
+		HiredOn:        body.HiredOn.timePtr(),
 	})
 	// Order matters: a missing id is a 404, even though a bad payload on the
 	// same request would be a 400.
@@ -178,12 +220,20 @@ func (s *Server) updateEmployee(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (s *Server) deleteEmployee(w http.ResponseWriter, r *http.Request) error {
+	org, err := currentOrganization(r)
+	if err != nil {
+		return err
+	}
+
 	id, err := pathUUID(r)
 	if err != nil {
 		return err
 	}
 
-	rows, err := s.q.DeleteEmployee(r.Context(), id)
+	rows, err := s.q.DeleteEmployee(r.Context(), db.DeleteEmployeeParams{
+		OrganizationID: org,
+		ID:             id,
+	})
 	if err != nil {
 		return httpx.Internal(err)
 	}

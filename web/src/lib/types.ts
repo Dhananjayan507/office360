@@ -1,15 +1,29 @@
-/** Mirrors the JSON shapes returned by the Go API (`api/internal/db/models.go`). */
+/** Mirrors the JSON shapes returned by the Go API (`internal/db/models.go`). */
 
 export type EmployeeStatus = 'active' | 'on_leave' | 'exited';
 
+export type OrganizationStatus = 'active' | 'suspended' | 'closed';
+
+/** The tenant root. Every record below belongs to exactly one. */
+export interface Organization {
+	id: string;
+	name: string;
+	slug: string;
+	status: OrganizationStatus;
+	created_at: string;
+	updated_at: string;
+}
+
 export interface Department {
 	id: string;
+	organization_id: string;
 	name: string;
 	created_at: string;
 }
 
 export interface Employee {
 	id: string;
+	organization_id: string;
 	department_id: string | null;
 	full_name: string;
 	email: string;
