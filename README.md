@@ -177,13 +177,24 @@ That UUID is the "Default Organisation" seeded by migration `000002`.
 
 ## Transactions
 
-Services own the transaction; handlers never see one. `internal/platform/txn`
-provides `InTx` for writes and `InReadOnlyTx` for reads that must agree with each
-other — a list and its total, which otherwise disagree if a row is inserted
-between the two statements.
+Services own the transaction; handlers never see one. `internal/db/tx.go`
+provides `TxManager.Run(ctx, fn)` for writes and `RunReadOnly` for reads that
+must agree with each other — a list and its total, which otherwise disagree if a
+row is inserted between the two statements.
+
+```go
+err := s.txn.Run(ctx, func(q *db.Queries) error {
+    if _, err := q.CreateInvoice(ctx, invoiceArgs); err != nil {
+        return err // rolls back
+    }
+    _, err := q.CreateJournal(ctx, journalArgs)
+    return err // nil commits
+})
+```
 
 Inside the callback use only the `*db.Queries` you are handed. The manager's
-`Queries()` runs on a different pooled connection, outside the transaction.
+`Queries()` runs on a different pooled connection, outside the transaction: it
+would not see uncommitted writes and would survive a rollback.
 
 ## Changing the data model
 
@@ -222,17 +233,14 @@ Day 1 is complete: toolchain, repository, folder tree, server foundation with
 envelopes and typed errors, health and ping.
 
 Day 2 is complete: multi-tenancy, the transaction manager, and the full schema —
-41 tables, 38 of them tenant-scoped, across identity, people, payroll, clients,
-delivery, revenue, finance and operations.
+47 tables across ten migrations, covering platform, people, delivery, revenue,
+finance and operations.
 
-Verified against Postgres 16.14. Cross-tenant reads, updates and deletes all
-return 404 with a second organisation present, and a schema audit confirms every
-foreign key into a tenant table carries `organization_id`.
-
-One caveat worth knowing: the table set in migration `000003` was derived from
-the module names in this README, not from the build plan. Table and column names
-may need correcting against it. The tenancy conventions above hold regardless,
-which is the part that is expensive to change later.
+Verified against Postgres 16.14: `migrate down` reverses all ten leaving zero
+tables, zero enum types and zero functions behind; `sqlc generate` is clean; a
+deliberately failing transaction leaves the database unchanged
+(`internal/db/tx_test.go`); and a schema audit confirms every foreign key into a
+tenant table carries `organization_id`.
 
 Still absent: authentication (Day 3), the `authz`/`tenant`/`audit` packages and
 the automated isolation test (Day 4), and every business module (Day 6+). The

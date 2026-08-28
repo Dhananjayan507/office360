@@ -12,39 +12,68 @@ import (
 )
 
 const createOrganization = `-- name: CreateOrganization :one
-INSERT INTO organizations (name, slug)
-VALUES ($1::text, $2::text)
-RETURNING id, name, slug, status, created_at, updated_at, legal_name, gstin, pan, state_code, address, phone, email
+INSERT INTO organizations (name, slug, legal_name, gstin, pan, state_code, created_by)
+VALUES (
+    $1::text,
+    $2::text,
+    $3::text,
+    $4::text,
+    $5::text,
+    $6::text,
+    $7::uuid
+)
+RETURNING id, name, slug, legal_name, status, gstin, pan, state_code, address, city, postal_code, country, phone, email, currency, timezone, fy_start_month, created_at, updated_at, created_by, updated_by
 `
 
 type CreateOrganizationParams struct {
-	Name string `json:"name"`
-	Slug string `json:"slug"`
+	Name      string     `json:"name"`
+	Slug      string     `json:"slug"`
+	LegalName *string    `json:"legal_name"`
+	Gstin     *string    `json:"gstin"`
+	Pan       *string    `json:"pan"`
+	StateCode *string    `json:"state_code"`
+	CreatedBy *uuid.UUID `json:"created_by"`
 }
 
 func (q *Queries) CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error) {
-	row := q.db.QueryRow(ctx, createOrganization, arg.Name, arg.Slug)
+	row := q.db.QueryRow(ctx, createOrganization,
+		arg.Name,
+		arg.Slug,
+		arg.LegalName,
+		arg.Gstin,
+		arg.Pan,
+		arg.StateCode,
+		arg.CreatedBy,
+	)
 	var i Organization
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Slug,
-		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.LegalName,
+		&i.Status,
 		&i.Gstin,
 		&i.Pan,
 		&i.StateCode,
 		&i.Address,
+		&i.City,
+		&i.PostalCode,
+		&i.Country,
 		&i.Phone,
 		&i.Email,
+		&i.Currency,
+		&i.Timezone,
+		&i.FyStartMonth,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedBy,
+		&i.UpdatedBy,
 	)
 	return i, err
 }
 
 const getOrganization = `-- name: GetOrganization :one
-SELECT id, name, slug, status, created_at, updated_at, legal_name, gstin, pan, state_code, address, phone, email FROM organizations
+SELECT id, name, slug, legal_name, status, gstin, pan, state_code, address, city, postal_code, country, phone, email, currency, timezone, fy_start_month, created_at, updated_at, created_by, updated_by FROM organizations
 WHERE id = $1::uuid
 `
 
@@ -55,22 +84,30 @@ func (q *Queries) GetOrganization(ctx context.Context, id uuid.UUID) (Organizati
 		&i.ID,
 		&i.Name,
 		&i.Slug,
-		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.LegalName,
+		&i.Status,
 		&i.Gstin,
 		&i.Pan,
 		&i.StateCode,
 		&i.Address,
+		&i.City,
+		&i.PostalCode,
+		&i.Country,
 		&i.Phone,
 		&i.Email,
+		&i.Currency,
+		&i.Timezone,
+		&i.FyStartMonth,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedBy,
+		&i.UpdatedBy,
 	)
 	return i, err
 }
 
 const getOrganizationBySlug = `-- name: GetOrganizationBySlug :one
-SELECT id, name, slug, status, created_at, updated_at, legal_name, gstin, pan, state_code, address, phone, email FROM organizations
+SELECT id, name, slug, legal_name, status, gstin, pan, state_code, address, city, postal_code, country, phone, email, currency, timezone, fy_start_month, created_at, updated_at, created_by, updated_by FROM organizations
 WHERE lower(slug) = lower($1::text)
 `
 
@@ -81,29 +118,36 @@ func (q *Queries) GetOrganizationBySlug(ctx context.Context, slug string) (Organ
 		&i.ID,
 		&i.Name,
 		&i.Slug,
-		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.LegalName,
+		&i.Status,
 		&i.Gstin,
 		&i.Pan,
 		&i.StateCode,
 		&i.Address,
+		&i.City,
+		&i.PostalCode,
+		&i.Country,
 		&i.Phone,
 		&i.Email,
+		&i.Currency,
+		&i.Timezone,
+		&i.FyStartMonth,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedBy,
+		&i.UpdatedBy,
 	)
 	return i, err
 }
 
 const listOrganizations = `-- name: ListOrganizations :many
 
-SELECT id, name, slug, status, created_at, updated_at, legal_name, gstin, pan, state_code, address, phone, email FROM organizations
+SELECT id, name, slug, legal_name, status, gstin, pan, state_code, address, city, postal_code, country, phone, email, currency, timezone, fy_start_month, created_at, updated_at, created_by, updated_by FROM organizations
 ORDER BY name
 `
 
 // Organisations are the tenant root, so these are the only queries in the
-// codebase not scoped by organization_id. The /platform portal owns them; no
-// HTTP route reaches them yet.
+// codebase not scoped by organization_id.
 func (q *Queries) ListOrganizations(ctx context.Context) ([]Organization, error) {
 	rows, err := q.db.Query(ctx, listOrganizations)
 	if err != nil {
@@ -117,16 +161,24 @@ func (q *Queries) ListOrganizations(ctx context.Context) ([]Organization, error)
 			&i.ID,
 			&i.Name,
 			&i.Slug,
-			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
 			&i.LegalName,
+			&i.Status,
 			&i.Gstin,
 			&i.Pan,
 			&i.StateCode,
 			&i.Address,
+			&i.City,
+			&i.PostalCode,
+			&i.Country,
 			&i.Phone,
 			&i.Email,
+			&i.Currency,
+			&i.Timezone,
+			&i.FyStartMonth,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CreatedBy,
+			&i.UpdatedBy,
 		); err != nil {
 			return nil, err
 		}
@@ -140,34 +192,44 @@ func (q *Queries) ListOrganizations(ctx context.Context) ([]Organization, error)
 
 const updateOrganizationStatus = `-- name: UpdateOrganizationStatus :one
 UPDATE organizations
-SET status = $1::text,
-    updated_at = now()
-WHERE id = $2::uuid
-RETURNING id, name, slug, status, created_at, updated_at, legal_name, gstin, pan, state_code, address, phone, email
+SET status = $1::organization_status,
+    updated_at = now(),
+    updated_by = $2::uuid
+WHERE id = $3::uuid
+RETURNING id, name, slug, legal_name, status, gstin, pan, state_code, address, city, postal_code, country, phone, email, currency, timezone, fy_start_month, created_at, updated_at, created_by, updated_by
 `
 
 type UpdateOrganizationStatusParams struct {
-	Status string    `json:"status"`
-	ID     uuid.UUID `json:"id"`
+	Status    OrganizationStatus `json:"status"`
+	UpdatedBy *uuid.UUID         `json:"updated_by"`
+	ID        uuid.UUID          `json:"id"`
 }
 
 func (q *Queries) UpdateOrganizationStatus(ctx context.Context, arg UpdateOrganizationStatusParams) (Organization, error) {
-	row := q.db.QueryRow(ctx, updateOrganizationStatus, arg.Status, arg.ID)
+	row := q.db.QueryRow(ctx, updateOrganizationStatus, arg.Status, arg.UpdatedBy, arg.ID)
 	var i Organization
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Slug,
-		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.LegalName,
+		&i.Status,
 		&i.Gstin,
 		&i.Pan,
 		&i.StateCode,
 		&i.Address,
+		&i.City,
+		&i.PostalCode,
+		&i.Country,
 		&i.Phone,
 		&i.Email,
+		&i.Currency,
+		&i.Timezone,
+		&i.FyStartMonth,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedBy,
+		&i.UpdatedBy,
 	)
 	return i, err
 }

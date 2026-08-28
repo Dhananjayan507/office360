@@ -16,13 +16,13 @@ const countEmployees = `-- name: CountEmployees :one
 SELECT count(*) FROM employees
 WHERE organization_id = $1::uuid
   AND ($2::uuid IS NULL OR department_id = $2::uuid)
-  AND ($3::text IS NULL OR status = $3::text)
+  AND ($3::employee_status IS NULL OR status = $3::employee_status)
 `
 
 type CountEmployeesParams struct {
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	DepartmentID   *uuid.UUID `json:"department_id"`
-	Status         *string    `json:"status"`
+	OrganizationID uuid.UUID       `json:"organization_id"`
+	DepartmentID   *uuid.UUID      `json:"department_id"`
+	Status         *EmployeeStatus `json:"status"`
 }
 
 func (q *Queries) CountEmployees(ctx context.Context, arg CountEmployeesParams) (int64, error) {
@@ -33,60 +33,87 @@ func (q *Queries) CountEmployees(ctx context.Context, arg CountEmployeesParams) 
 }
 
 const createEmployee = `-- name: CreateEmployee :one
-INSERT INTO employees (organization_id, department_id, full_name, email, title, status, hired_on)
+INSERT INTO employees (
+    organization_id, employee_code, department_id, designation_id, full_name,
+    email, phone, status, employment_type, hired_on, created_by, updated_by
+)
 VALUES (
     $1::uuid,
-    $2::uuid,
-    $3::text,
-    $4::text,
+    $2::text,
+    $3::uuid,
+    $4::uuid,
     $5::text,
-    coalesce($6::text, 'active'),
-    $7::date
+    $6::text,
+    $7::text,
+    coalesce($8::employee_status, 'probation'),
+    coalesce($9::employment_type, 'full_time'),
+    $10::date,
+    $11::uuid,
+    $11::uuid
 )
-RETURNING id, department_id, full_name, email, title, status, hired_on, created_at, updated_at, organization_id, designation_id, manager_id, phone, pan, aadhaar_last4, pf_number, esi_number, bank_account, bank_ifsc
+RETURNING organization_id, id, employee_code, user_id, department_id, team_id, designation_id, manager_id, full_name, email, phone, gender, date_of_birth, status, employment_type, hired_on, confirmed_on, exited_on, pan, aadhaar_last4, uan, pf_number, esi_number, bank_account, bank_ifsc, address, created_at, updated_at, created_by, updated_by
 `
 
 type CreateEmployeeParams struct {
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	DepartmentID   *uuid.UUID `json:"department_id"`
-	FullName       string     `json:"full_name"`
-	Email          string     `json:"email"`
-	Title          *string    `json:"title"`
-	Status         *string    `json:"status"`
-	HiredOn        *time.Time `json:"hired_on"`
+	OrganizationID uuid.UUID       `json:"organization_id"`
+	EmployeeCode   string          `json:"employee_code"`
+	DepartmentID   *uuid.UUID      `json:"department_id"`
+	DesignationID  *uuid.UUID      `json:"designation_id"`
+	FullName       string          `json:"full_name"`
+	Email          string          `json:"email"`
+	Phone          *string         `json:"phone"`
+	Status         *EmployeeStatus `json:"status"`
+	EmploymentType *EmploymentType `json:"employment_type"`
+	HiredOn        *time.Time      `json:"hired_on"`
+	ActorID        *uuid.UUID      `json:"actor_id"`
 }
 
 func (q *Queries) CreateEmployee(ctx context.Context, arg CreateEmployeeParams) (Employee, error) {
 	row := q.db.QueryRow(ctx, createEmployee,
 		arg.OrganizationID,
+		arg.EmployeeCode,
 		arg.DepartmentID,
+		arg.DesignationID,
 		arg.FullName,
 		arg.Email,
-		arg.Title,
+		arg.Phone,
 		arg.Status,
+		arg.EmploymentType,
 		arg.HiredOn,
+		arg.ActorID,
 	)
 	var i Employee
 	err := row.Scan(
-		&i.ID,
-		&i.DepartmentID,
-		&i.FullName,
-		&i.Email,
-		&i.Title,
-		&i.Status,
-		&i.HiredOn,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.OrganizationID,
+		&i.ID,
+		&i.EmployeeCode,
+		&i.UserID,
+		&i.DepartmentID,
+		&i.TeamID,
 		&i.DesignationID,
 		&i.ManagerID,
+		&i.FullName,
+		&i.Email,
 		&i.Phone,
+		&i.Gender,
+		&i.DateOfBirth,
+		&i.Status,
+		&i.EmploymentType,
+		&i.HiredOn,
+		&i.ConfirmedOn,
+		&i.ExitedOn,
 		&i.Pan,
 		&i.AadhaarLast4,
+		&i.Uan,
 		&i.PfNumber,
 		&i.EsiNumber,
 		&i.BankAccount,
 		&i.BankIfsc,
+		&i.Address,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedBy,
+		&i.UpdatedBy,
 	)
 	return i, err
 }
@@ -111,7 +138,7 @@ func (q *Queries) DeleteEmployee(ctx context.Context, arg DeleteEmployeeParams) 
 }
 
 const getEmployee = `-- name: GetEmployee :one
-SELECT id, department_id, full_name, email, title, status, hired_on, created_at, updated_at, organization_id, designation_id, manager_id, phone, pan, aadhaar_last4, pf_number, esi_number, bank_account, bank_ifsc FROM employees
+SELECT organization_id, id, employee_code, user_id, department_id, team_id, designation_id, manager_id, full_name, email, phone, gender, date_of_birth, status, employment_type, hired_on, confirmed_on, exited_on, pan, aadhaar_last4, uan, pf_number, esi_number, bank_account, bank_ifsc, address, created_at, updated_at, created_by, updated_by FROM employees
 WHERE organization_id = $1::uuid
   AND id = $2::uuid
 `
@@ -125,49 +152,60 @@ func (q *Queries) GetEmployee(ctx context.Context, arg GetEmployeeParams) (Emplo
 	row := q.db.QueryRow(ctx, getEmployee, arg.OrganizationID, arg.ID)
 	var i Employee
 	err := row.Scan(
-		&i.ID,
-		&i.DepartmentID,
-		&i.FullName,
-		&i.Email,
-		&i.Title,
-		&i.Status,
-		&i.HiredOn,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.OrganizationID,
+		&i.ID,
+		&i.EmployeeCode,
+		&i.UserID,
+		&i.DepartmentID,
+		&i.TeamID,
 		&i.DesignationID,
 		&i.ManagerID,
+		&i.FullName,
+		&i.Email,
 		&i.Phone,
+		&i.Gender,
+		&i.DateOfBirth,
+		&i.Status,
+		&i.EmploymentType,
+		&i.HiredOn,
+		&i.ConfirmedOn,
+		&i.ExitedOn,
 		&i.Pan,
 		&i.AadhaarLast4,
+		&i.Uan,
 		&i.PfNumber,
 		&i.EsiNumber,
 		&i.BankAccount,
 		&i.BankIfsc,
+		&i.Address,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedBy,
+		&i.UpdatedBy,
 	)
 	return i, err
 }
 
 const listEmployees = `-- name: ListEmployees :many
 
-SELECT id, department_id, full_name, email, title, status, hired_on, created_at, updated_at, organization_id, designation_id, manager_id, phone, pan, aadhaar_last4, pf_number, esi_number, bank_account, bank_ifsc FROM employees
+SELECT organization_id, id, employee_code, user_id, department_id, team_id, designation_id, manager_id, full_name, email, phone, gender, date_of_birth, status, employment_type, hired_on, confirmed_on, exited_on, pan, aadhaar_last4, uan, pf_number, esi_number, bank_account, bank_ifsc, address, created_at, updated_at, created_by, updated_by FROM employees
 WHERE organization_id = $1::uuid
   AND ($2::uuid IS NULL OR department_id = $2::uuid)
-  AND ($3::text IS NULL OR status = $3::text)
+  AND ($3::employee_status IS NULL OR status = $3::employee_status)
 ORDER BY full_name
 LIMIT $5::int OFFSET $4::int
 `
 
 type ListEmployeesParams struct {
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	DepartmentID   *uuid.UUID `json:"department_id"`
-	Status         *string    `json:"status"`
-	Offset         int32      `json:"offset"`
-	Limit          int32      `json:"limit"`
+	OrganizationID uuid.UUID       `json:"organization_id"`
+	DepartmentID   *uuid.UUID      `json:"department_id"`
+	Status         *EmployeeStatus `json:"status"`
+	Offset         int32           `json:"offset"`
+	Limit          int32           `json:"limit"`
 }
 
-// Every query is scoped by organization_id, including the writes: an UPDATE or
-// DELETE that matched on id alone would reach across tenants.
+// Every query is scoped by organization_id, writes included: an UPDATE or
+// DELETE matching on id alone would reach across tenants.
 func (q *Queries) ListEmployees(ctx context.Context, arg ListEmployeesParams) ([]Employee, error) {
 	rows, err := q.db.Query(ctx, listEmployees,
 		arg.OrganizationID,
@@ -184,25 +222,36 @@ func (q *Queries) ListEmployees(ctx context.Context, arg ListEmployeesParams) ([
 	for rows.Next() {
 		var i Employee
 		if err := rows.Scan(
-			&i.ID,
-			&i.DepartmentID,
-			&i.FullName,
-			&i.Email,
-			&i.Title,
-			&i.Status,
-			&i.HiredOn,
-			&i.CreatedAt,
-			&i.UpdatedAt,
 			&i.OrganizationID,
+			&i.ID,
+			&i.EmployeeCode,
+			&i.UserID,
+			&i.DepartmentID,
+			&i.TeamID,
 			&i.DesignationID,
 			&i.ManagerID,
+			&i.FullName,
+			&i.Email,
 			&i.Phone,
+			&i.Gender,
+			&i.DateOfBirth,
+			&i.Status,
+			&i.EmploymentType,
+			&i.HiredOn,
+			&i.ConfirmedOn,
+			&i.ExitedOn,
 			&i.Pan,
 			&i.AadhaarLast4,
+			&i.Uan,
 			&i.PfNumber,
 			&i.EsiNumber,
 			&i.BankAccount,
 			&i.BankIfsc,
+			&i.Address,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CreatedBy,
+			&i.UpdatedBy,
 		); err != nil {
 			return nil, err
 		}
@@ -216,61 +265,81 @@ func (q *Queries) ListEmployees(ctx context.Context, arg ListEmployeesParams) ([
 
 const updateEmployee = `-- name: UpdateEmployee :one
 UPDATE employees
-SET department_id = coalesce($1::uuid, department_id),
-    full_name     = coalesce($2::text, full_name),
-    email         = coalesce($3::text, email),
-    title         = coalesce($4::text, title),
-    status        = coalesce($5::text, status),
-    hired_on      = coalesce($6::date, hired_on),
-    updated_at    = now()
-WHERE organization_id = $7::uuid
-  AND id = $8::uuid
-RETURNING id, department_id, full_name, email, title, status, hired_on, created_at, updated_at, organization_id, designation_id, manager_id, phone, pan, aadhaar_last4, pf_number, esi_number, bank_account, bank_ifsc
+SET department_id   = coalesce($1::uuid, department_id),
+    designation_id  = coalesce($2::uuid, designation_id),
+    full_name       = coalesce($3::text, full_name),
+    email           = coalesce($4::text, email),
+    phone           = coalesce($5::text, phone),
+    status          = coalesce($6::employee_status, status),
+    employment_type = coalesce($7::employment_type, employment_type),
+    hired_on        = coalesce($8::date, hired_on),
+    updated_at      = now(),
+    updated_by      = coalesce($9::uuid, updated_by)
+WHERE organization_id = $10::uuid
+  AND id = $11::uuid
+RETURNING organization_id, id, employee_code, user_id, department_id, team_id, designation_id, manager_id, full_name, email, phone, gender, date_of_birth, status, employment_type, hired_on, confirmed_on, exited_on, pan, aadhaar_last4, uan, pf_number, esi_number, bank_account, bank_ifsc, address, created_at, updated_at, created_by, updated_by
 `
 
 type UpdateEmployeeParams struct {
-	DepartmentID   *uuid.UUID `json:"department_id"`
-	FullName       *string    `json:"full_name"`
-	Email          *string    `json:"email"`
-	Title          *string    `json:"title"`
-	Status         *string    `json:"status"`
-	HiredOn        *time.Time `json:"hired_on"`
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	ID             uuid.UUID  `json:"id"`
+	DepartmentID   *uuid.UUID      `json:"department_id"`
+	DesignationID  *uuid.UUID      `json:"designation_id"`
+	FullName       *string         `json:"full_name"`
+	Email          *string         `json:"email"`
+	Phone          *string         `json:"phone"`
+	Status         *EmployeeStatus `json:"status"`
+	EmploymentType *EmploymentType `json:"employment_type"`
+	HiredOn        *time.Time      `json:"hired_on"`
+	ActorID        *uuid.UUID      `json:"actor_id"`
+	OrganizationID uuid.UUID       `json:"organization_id"`
+	ID             uuid.UUID       `json:"id"`
 }
 
 func (q *Queries) UpdateEmployee(ctx context.Context, arg UpdateEmployeeParams) (Employee, error) {
 	row := q.db.QueryRow(ctx, updateEmployee,
 		arg.DepartmentID,
+		arg.DesignationID,
 		arg.FullName,
 		arg.Email,
-		arg.Title,
+		arg.Phone,
 		arg.Status,
+		arg.EmploymentType,
 		arg.HiredOn,
+		arg.ActorID,
 		arg.OrganizationID,
 		arg.ID,
 	)
 	var i Employee
 	err := row.Scan(
-		&i.ID,
-		&i.DepartmentID,
-		&i.FullName,
-		&i.Email,
-		&i.Title,
-		&i.Status,
-		&i.HiredOn,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.OrganizationID,
+		&i.ID,
+		&i.EmployeeCode,
+		&i.UserID,
+		&i.DepartmentID,
+		&i.TeamID,
 		&i.DesignationID,
 		&i.ManagerID,
+		&i.FullName,
+		&i.Email,
 		&i.Phone,
+		&i.Gender,
+		&i.DateOfBirth,
+		&i.Status,
+		&i.EmploymentType,
+		&i.HiredOn,
+		&i.ConfirmedOn,
+		&i.ExitedOn,
 		&i.Pan,
 		&i.AadhaarLast4,
+		&i.Uan,
 		&i.PfNumber,
 		&i.EsiNumber,
 		&i.BankAccount,
 		&i.BankIfsc,
+		&i.Address,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedBy,
+		&i.UpdatedBy,
 	)
 	return i, err
 }

@@ -19,9 +19,28 @@ const (
 	maxLimit     = 200
 )
 
-var employeeStatuses = map[string]bool{"active": true, "on_leave": true, "exited": true}
+// The enum values come from Postgres via sqlc, so this list cannot drift from
+// the database the way a hand-maintained one would.
+var employeeStatuses = map[db.EmployeeStatus]bool{
+	db.EmployeeStatusProbation: true,
+	db.EmployeeStatusActive:    true,
+	db.EmployeeStatusOnLeave:   true,
+	db.EmployeeStatusNotice:    true,
+	db.EmployeeStatusExited:    true,
+}
 
-const statusMessage = "status must be one of: active, on_leave, exited"
+var employmentTypes = map[db.EmploymentType]bool{
+	db.EmploymentTypeFullTime:   true,
+	db.EmploymentTypePartTime:   true,
+	db.EmploymentTypeContract:   true,
+	db.EmploymentTypeIntern:     true,
+	db.EmploymentTypeConsultant: true,
+}
+
+const (
+	statusMessage         = "status must be one of: probation, active, on_leave, notice, exited"
+	employmentTypeMessage = "employment_type must be one of: full_time, part_time, contract, intern, consultant"
+)
 
 func (s *Server) listEmployees(w http.ResponseWriter, r *http.Request) error {
 	org, err := currentOrganization(r)
@@ -36,12 +55,9 @@ func (s *Server) listEmployees(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	var status *string
-	if raw := strings.TrimSpace(q.Get("status")); raw != "" {
-		if !employeeStatuses[raw] {
-			return httpx.Validation(statusMessage, map[string]string{"status": "invalid value"})
-		}
-		status = &raw
+	status, err := optionalStatusParam(q.Get("status"))
+	if err != nil {
+		return err
 	}
 
 	limit := intParam(q.Get("limit"), defaultLimit, 1, maxLimit)
@@ -52,10 +68,10 @@ func (s *Server) listEmployees(w http.ResponseWriter, r *http.Request) error {
 		total int64
 	)
 
-	// The page and its total have to agree. Run as one read-only transaction so
-	// a row inserted between the two statements cannot produce a total that does
-	// not match the rows returned beside it.
-	err = s.txn.InReadOnlyTx(r.Context(), func(tq *db.Queries) error {
+	// One read-only transaction, so the page and its total agree: without it a
+	// row inserted between the two statements yields a count that does not match
+	// the rows returned beside it.
+	err = s.txn.RunReadOnly(r.Context(), func(tq *db.Queries) error {
 		var err error
 		rows, err = tq.ListEmployees(r.Context(), db.ListEmployeesParams{
 			OrganizationID: org,
@@ -97,9 +113,9 @@ func (s *Server) getEmployee(w http.ResponseWriter, r *http.Request) error {
 		OrganizationID: org,
 		ID:             id,
 	})
-	// An employee belonging to another organisation misses the scoped WHERE and
-	// arrives here as ErrNoRows — a 404, never a 403, so the response cannot
-	// confirm that the id exists somewhere else.
+	// An employee in another organisation misses the scoped WHERE and arrives
+	// here as ErrNoRows — a 404, never a 403, so the response cannot confirm
+	// that the id exists somewhere else.
 	if errors.Is(err, pgx.ErrNoRows) {
 		return httpx.NotFound("employee not found")
 	}
@@ -111,12 +127,15 @@ func (s *Server) getEmployee(w http.ResponseWriter, r *http.Request) error {
 }
 
 type createEmployeeRequest struct {
-	DepartmentID *uuid.UUID `json:"department_id"`
-	FullName     string     `json:"full_name"`
-	Email        string     `json:"email"`
-	Title        *string    `json:"title"`
-	Status       *string    `json:"status"`
-	HiredOn      *jsonDate  `json:"hired_on"`
+	EmployeeCode   string             `json:"employee_code"`
+	DepartmentID   *uuid.UUID         `json:"department_id"`
+	DesignationID  *uuid.UUID         `json:"designation_id"`
+	FullName       string             `json:"full_name"`
+	Email          string             `json:"email"`
+	Phone          *string            `json:"phone"`
+	Status         *db.EmployeeStatus `json:"status"`
+	EmploymentType *db.EmploymentType `json:"employment_type"`
+	HiredOn        *jsonDate          `json:"hired_on"`
 }
 
 func (s *Server) createEmployee(w http.ResponseWriter, r *http.Request) error {
@@ -130,10 +149,14 @@ func (s *Server) createEmployee(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
+	body.EmployeeCode = strings.TrimSpace(body.EmployeeCode)
 	body.FullName = strings.TrimSpace(body.FullName)
 	body.Email = strings.TrimSpace(body.Email)
 
 	fields := map[string]string{}
+	if body.EmployeeCode == "" {
+		fields["employee_code"] = "required"
+	}
 	if body.FullName == "" {
 		fields["full_name"] = "required"
 	}
@@ -143,21 +166,27 @@ func (s *Server) createEmployee(w http.ResponseWriter, r *http.Request) error {
 	if body.Status != nil && !employeeStatuses[*body.Status] {
 		fields["status"] = "invalid value"
 	}
+	if body.EmploymentType != nil && !employmentTypes[*body.EmploymentType] {
+		fields["employment_type"] = "invalid value"
+	}
 	if len(fields) > 0 {
 		return httpx.Validation("the employee could not be created", fields)
 	}
 
 	employee, err := s.q.CreateEmployee(r.Context(), db.CreateEmployeeParams{
 		OrganizationID: org,
+		EmployeeCode:   body.EmployeeCode,
 		DepartmentID:   body.DepartmentID,
+		DesignationID:  body.DesignationID,
 		FullName:       body.FullName,
 		Email:          body.Email,
-		Title:          body.Title,
+		Phone:          body.Phone,
 		Status:         body.Status,
+		EmploymentType: body.EmploymentType,
 		HiredOn:        body.HiredOn.timePtr(),
 	})
 	if err != nil {
-		if ce := constraintError(err); ce != nil {
+		if ce := employeeConstraintError(err); ce != nil {
 			return ce
 		}
 		return httpx.Internal(err)
@@ -167,12 +196,14 @@ func (s *Server) createEmployee(w http.ResponseWriter, r *http.Request) error {
 }
 
 type updateEmployeeRequest struct {
-	DepartmentID *uuid.UUID `json:"department_id"`
-	FullName     *string    `json:"full_name"`
-	Email        *string    `json:"email"`
-	Title        *string    `json:"title"`
-	Status       *string    `json:"status"`
-	HiredOn      *jsonDate  `json:"hired_on"`
+	DepartmentID   *uuid.UUID         `json:"department_id"`
+	DesignationID  *uuid.UUID         `json:"designation_id"`
+	FullName       *string            `json:"full_name"`
+	Email          *string            `json:"email"`
+	Phone          *string            `json:"phone"`
+	Status         *db.EmployeeStatus `json:"status"`
+	EmploymentType *db.EmploymentType `json:"employment_type"`
+	HiredOn        *jsonDate          `json:"hired_on"`
 }
 
 func (s *Server) updateEmployee(w http.ResponseWriter, r *http.Request) error {
@@ -193,15 +224,20 @@ func (s *Server) updateEmployee(w http.ResponseWriter, r *http.Request) error {
 	if body.Status != nil && !employeeStatuses[*body.Status] {
 		return httpx.Validation(statusMessage, map[string]string{"status": "invalid value"})
 	}
+	if body.EmploymentType != nil && !employmentTypes[*body.EmploymentType] {
+		return httpx.Validation(employmentTypeMessage, map[string]string{"employment_type": "invalid value"})
+	}
 
 	employee, err := s.q.UpdateEmployee(r.Context(), db.UpdateEmployeeParams{
 		OrganizationID: org,
 		ID:             id,
 		DepartmentID:   body.DepartmentID,
+		DesignationID:  body.DesignationID,
 		FullName:       body.FullName,
 		Email:          body.Email,
-		Title:          body.Title,
+		Phone:          body.Phone,
 		Status:         body.Status,
+		EmploymentType: body.EmploymentType,
 		HiredOn:        body.HiredOn.timePtr(),
 	})
 	// Order matters: a missing id is a 404, even though a bad payload on the
@@ -210,7 +246,7 @@ func (s *Server) updateEmployee(w http.ResponseWriter, r *http.Request) error {
 		return httpx.NotFound("employee not found")
 	}
 	if err != nil {
-		if ce := constraintError(err); ce != nil {
+		if ce := employeeConstraintError(err); ce != nil {
 			return ce
 		}
 		return httpx.Internal(err)
@@ -244,19 +280,21 @@ func (s *Server) deleteEmployee(w http.ResponseWriter, r *http.Request) error {
 	return httpx.NoContent(w, r)
 }
 
-// constraintError translates the Postgres constraint violations these handlers
-// can legitimately hit into typed errors. It returns nil for anything else, so
-// the caller falls through to Internal.
-func constraintError(err error) error {
+// employeeConstraintError translates the Postgres constraint violations these
+// handlers can legitimately hit into typed errors. It returns nil for anything
+// else, so the caller falls through to Internal.
+func employeeConstraintError(err error) error {
 	switch pgCode(err) {
 	case "23505": // unique_violation
-		return httpx.Conflict("an employee with that email already exists").
-			WithCode("employee.email_taken")
+		return httpx.Conflict("an employee with that email or code already exists").
+			WithCode("employee.duplicate")
 	case "23503": // foreign_key_violation
+		// The composite key also catches an id belonging to another tenant, so
+		// this covers a cross-organisation reference as well as a missing row.
 		return httpx.Validation("the employee could not be saved",
-			map[string]string{"department_id": "no such department"})
+			map[string]string{"department_id": "no such department in this organisation"})
 	case "23514": // check_violation
-		return httpx.Validation(statusMessage, map[string]string{"status": "invalid value"})
+		return httpx.Validation("the employee could not be saved", nil)
 	default:
 		return nil
 	}
@@ -279,6 +317,17 @@ func optionalUUIDParam(raw, name string) (*uuid.UUID, error) {
 		return nil, httpx.Validation(name+" must be a UUID", map[string]string{name: "not a UUID"})
 	}
 	return &id, nil
+}
+
+func optionalStatusParam(raw string) (*db.EmployeeStatus, error) {
+	if raw = strings.TrimSpace(raw); raw == "" {
+		return nil, nil
+	}
+	status := db.EmployeeStatus(raw)
+	if !employeeStatuses[status] {
+		return nil, httpx.Validation(statusMessage, map[string]string{"status": "invalid value"})
+	}
+	return &status, nil
 }
 
 // intParam clamps rather than rejects, so a stray ?limit=9999 still returns a page.

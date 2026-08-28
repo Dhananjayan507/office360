@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
+
 	"github.com/Dhananjayan507/office360/internal/db"
 	"github.com/Dhananjayan507/office360/internal/httpx"
 )
@@ -24,7 +26,9 @@ func (s *Server) listDepartments(w http.ResponseWriter, r *http.Request) error {
 }
 
 type createDepartmentRequest struct {
-	Name string `json:"name"`
+	Name     string     `json:"name"`
+	Code     *string    `json:"code"`
+	ParentID *uuid.UUID `json:"parent_id"`
 }
 
 func (s *Server) createDepartment(w http.ResponseWriter, r *http.Request) error {
@@ -46,6 +50,8 @@ func (s *Server) createDepartment(w http.ResponseWriter, r *http.Request) error 
 	department, err := s.q.CreateDepartment(r.Context(), db.CreateDepartmentParams{
 		OrganizationID: org,
 		Name:           body.Name,
+		Code:           body.Code,
+		ParentID:       body.ParentID,
 	})
 	if pgCode(err) == "23505" {
 		return httpx.Conflict("a department with that name already exists").

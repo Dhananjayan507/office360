@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS client_contacts;
+DROP TABLE IF EXISTS leads;
+DROP TABLE IF EXISTS clients;
+DROP TABLE IF EXISTS enquiries;

@@ -15,12 +15,22 @@
 		'Invoke-RestMethod -Uri http://localhost:8080/api/v1/employees -Method Post' +
 		" -ContentType 'application/json'" +
 		` -Headers @{'X-Organization-Id' = '${orgId}'}` +
-		' -Body \'{"full_name":"Ada Lovelace","email":"ada@office360.dev"}\'';
+		' -Body \'{"employee_code":"EMP-001","full_name":"Ada Lovelace","email":"ada@office360.dev"}\'';
 
 	const statusLabels: Record<string, string> = {
+		probation: 'Probation',
 		active: 'Active',
 		on_leave: 'On leave',
+		notice: 'Notice',
 		exited: 'Exited'
+	};
+
+	const typeLabels: Record<string, string> = {
+		full_time: 'Full time',
+		part_time: 'Part time',
+		contract: 'Contract',
+		intern: 'Intern',
+		consultant: 'Consultant'
 	};
 </script>
 
@@ -51,20 +61,22 @@
 	<table>
 		<thead>
 			<tr>
+				<th>Code</th>
 				<th>Name</th>
 				<th>Email</th>
 				<th>Department</th>
-				<th>Title</th>
+				<th>Type</th>
 				<th>Status</th>
 			</tr>
 		</thead>
 		<tbody>
 			{#each data.employees as employee (employee.id)}
 				<tr>
+					<td class="code">{employee.employee_code}</td>
 					<td class="name">{employee.full_name}</td>
 					<td>{employee.email}</td>
 					<td>{employee.department_id ? (byId.get(employee.department_id) ?? '—') : '—'}</td>
-					<td>{employee.title ?? '—'}</td>
+					<td>{typeLabels[employee.employment_type] ?? employee.employment_type}</td>
 					<td><span class="badge {employee.status}">{statusLabels[employee.status] ?? employee.status}</span></td>
 				</tr>
 			{/each}
@@ -167,10 +179,18 @@
 		border: 1px solid currentColor;
 	}
 
+	.code {
+		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+		font-size: 0.8rem;
+		color: var(--muted);
+	}
+
 	.badge.active {
 		color: var(--ok);
 	}
-	.badge.on_leave {
+	.badge.probation,
+	.badge.on_leave,
+	.badge.notice {
 		color: var(--warn);
 	}
 	.badge.exited {

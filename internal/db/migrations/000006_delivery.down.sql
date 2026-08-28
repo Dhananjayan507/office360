@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS timesheets;
+DROP TABLE IF EXISTS tasks;
+DROP TABLE IF EXISTS milestones;
+DROP TABLE IF EXISTS project_members;
+DROP TABLE IF EXISTS projects;

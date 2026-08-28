@@ -105,6 +105,9 @@ switch ($Task) {
         try {
             go build ./...; Assert-LastExit 'go build'
             go vet ./...; Assert-LastExit 'go vet'
+            # Database-backed tests skip themselves when Postgres is unreachable,
+            # so this stays runnable without the container.
+            go test ./...; Assert-LastExit 'go test'
         } finally { Pop-Location }
 
         Push-Location (Join-Path $Root 'web')

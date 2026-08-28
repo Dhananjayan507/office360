@@ -5,6 +5,8 @@
 package db
 
 import (
+	"database/sql/driver"
+	"fmt"
 	"net/netip"
 	"time"
 
@@ -12,30 +14,1625 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Approval struct {
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	ID             uuid.UUID  `json:"id"`
-	EntityType     string     `json:"entity_type"`
-	EntityID       uuid.UUID  `json:"entity_id"`
-	StepNo         int32      `json:"step_no"`
-	ApproverID     *uuid.UUID `json:"approver_id"`
-	Status         string     `json:"status"`
-	Comment        *string    `json:"comment"`
-	DecidedAt      *time.Time `json:"decided_at"`
-	CreatedAt      time.Time  `json:"created_at"`
+type AccountType string
+
+const (
+	AccountTypeAsset     AccountType = "asset"
+	AccountTypeLiability AccountType = "liability"
+	AccountTypeEquity    AccountType = "equity"
+	AccountTypeIncome    AccountType = "income"
+	AccountTypeExpense   AccountType = "expense"
+)
+
+func (e *AccountType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AccountType(s)
+	case string:
+		*e = AccountType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AccountType: %T", src)
+	}
+	return nil
+}
+
+type NullAccountType struct {
+	AccountType AccountType `json:"account_type"`
+	Valid       bool        `json:"valid"` // Valid is true if AccountType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAccountType) Scan(value interface{}) error {
+	if value == nil {
+		ns.AccountType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AccountType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAccountType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AccountType), nil
+}
+
+type AssetStatus string
+
+const (
+	AssetStatusInStock     AssetStatus = "in_stock"
+	AssetStatusAssigned    AssetStatus = "assigned"
+	AssetStatusUnderRepair AssetStatus = "under_repair"
+	AssetStatusRetired     AssetStatus = "retired"
+	AssetStatusLost        AssetStatus = "lost"
+)
+
+func (e *AssetStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AssetStatus(s)
+	case string:
+		*e = AssetStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AssetStatus: %T", src)
+	}
+	return nil
+}
+
+type NullAssetStatus struct {
+	AssetStatus AssetStatus `json:"asset_status"`
+	Valid       bool        `json:"valid"` // Valid is true if AssetStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAssetStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.AssetStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AssetStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAssetStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AssetStatus), nil
+}
+
+type AttendanceStatus string
+
+const (
+	AttendanceStatusPresent AttendanceStatus = "present"
+	AttendanceStatusAbsent  AttendanceStatus = "absent"
+	AttendanceStatusHalfDay AttendanceStatus = "half_day"
+	AttendanceStatusLeave   AttendanceStatus = "leave"
+	AttendanceStatusHoliday AttendanceStatus = "holiday"
+	AttendanceStatusWeekOff AttendanceStatus = "week_off"
+)
+
+func (e *AttendanceStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AttendanceStatus(s)
+	case string:
+		*e = AttendanceStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AttendanceStatus: %T", src)
+	}
+	return nil
+}
+
+type NullAttendanceStatus struct {
+	AttendanceStatus AttendanceStatus `json:"attendance_status"`
+	Valid            bool             `json:"valid"` // Valid is true if AttendanceStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAttendanceStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.AttendanceStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AttendanceStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAttendanceStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AttendanceStatus), nil
+}
+
+type AuditAction string
+
+const (
+	AuditActionCreate  AuditAction = "create"
+	AuditActionUpdate  AuditAction = "update"
+	AuditActionDelete  AuditAction = "delete"
+	AuditActionLogin   AuditAction = "login"
+	AuditActionLogout  AuditAction = "logout"
+	AuditActionExport  AuditAction = "export"
+	AuditActionApprove AuditAction = "approve"
+	AuditActionReject  AuditAction = "reject"
+)
+
+func (e *AuditAction) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AuditAction(s)
+	case string:
+		*e = AuditAction(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AuditAction: %T", src)
+	}
+	return nil
+}
+
+type NullAuditAction struct {
+	AuditAction AuditAction `json:"audit_action"`
+	Valid       bool        `json:"valid"` // Valid is true if AuditAction is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAuditAction) Scan(value interface{}) error {
+	if value == nil {
+		ns.AuditAction, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AuditAction.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAuditAction) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AuditAction), nil
+}
+
+type BillingType string
+
+const (
+	BillingTypeFixed           BillingType = "fixed"
+	BillingTypeTimeAndMaterial BillingType = "time_and_material"
+	BillingTypeRetainer        BillingType = "retainer"
+	BillingTypeInternal        BillingType = "internal"
+)
+
+func (e *BillingType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = BillingType(s)
+	case string:
+		*e = BillingType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for BillingType: %T", src)
+	}
+	return nil
+}
+
+type NullBillingType struct {
+	BillingType BillingType `json:"billing_type"`
+	Valid       bool        `json:"valid"` // Valid is true if BillingType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullBillingType) Scan(value interface{}) error {
+	if value == nil {
+		ns.BillingType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.BillingType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullBillingType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.BillingType), nil
+}
+
+type ClientStatus string
+
+const (
+	ClientStatusActive      ClientStatus = "active"
+	ClientStatusInactive    ClientStatus = "inactive"
+	ClientStatusBlacklisted ClientStatus = "blacklisted"
+)
+
+func (e *ClientStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ClientStatus(s)
+	case string:
+		*e = ClientStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ClientStatus: %T", src)
+	}
+	return nil
+}
+
+type NullClientStatus struct {
+	ClientStatus ClientStatus `json:"client_status"`
+	Valid        bool         `json:"valid"` // Valid is true if ClientStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullClientStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ClientStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ClientStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullClientStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ClientStatus), nil
+}
+
+type DocumentVisibility string
+
+const (
+	DocumentVisibilityInternal DocumentVisibility = "internal"
+	DocumentVisibilityClient   DocumentVisibility = "client"
+)
+
+func (e *DocumentVisibility) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = DocumentVisibility(s)
+	case string:
+		*e = DocumentVisibility(s)
+	default:
+		return fmt.Errorf("unsupported scan type for DocumentVisibility: %T", src)
+	}
+	return nil
+}
+
+type NullDocumentVisibility struct {
+	DocumentVisibility DocumentVisibility `json:"document_visibility"`
+	Valid              bool               `json:"valid"` // Valid is true if DocumentVisibility is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullDocumentVisibility) Scan(value interface{}) error {
+	if value == nil {
+		ns.DocumentVisibility, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.DocumentVisibility.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullDocumentVisibility) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.DocumentVisibility), nil
+}
+
+type EmployeeStatus string
+
+const (
+	EmployeeStatusProbation EmployeeStatus = "probation"
+	EmployeeStatusActive    EmployeeStatus = "active"
+	EmployeeStatusOnLeave   EmployeeStatus = "on_leave"
+	EmployeeStatusNotice    EmployeeStatus = "notice"
+	EmployeeStatusExited    EmployeeStatus = "exited"
+)
+
+func (e *EmployeeStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = EmployeeStatus(s)
+	case string:
+		*e = EmployeeStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for EmployeeStatus: %T", src)
+	}
+	return nil
+}
+
+type NullEmployeeStatus struct {
+	EmployeeStatus EmployeeStatus `json:"employee_status"`
+	Valid          bool           `json:"valid"` // Valid is true if EmployeeStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullEmployeeStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.EmployeeStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.EmployeeStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullEmployeeStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.EmployeeStatus), nil
+}
+
+type EmploymentType string
+
+const (
+	EmploymentTypeFullTime   EmploymentType = "full_time"
+	EmploymentTypePartTime   EmploymentType = "part_time"
+	EmploymentTypeContract   EmploymentType = "contract"
+	EmploymentTypeIntern     EmploymentType = "intern"
+	EmploymentTypeConsultant EmploymentType = "consultant"
+)
+
+func (e *EmploymentType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = EmploymentType(s)
+	case string:
+		*e = EmploymentType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for EmploymentType: %T", src)
+	}
+	return nil
+}
+
+type NullEmploymentType struct {
+	EmploymentType EmploymentType `json:"employment_type"`
+	Valid          bool           `json:"valid"` // Valid is true if EmploymentType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullEmploymentType) Scan(value interface{}) error {
+	if value == nil {
+		ns.EmploymentType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.EmploymentType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullEmploymentType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.EmploymentType), nil
+}
+
+type EnquiryStatus string
+
+const (
+	EnquiryStatusNew       EnquiryStatus = "new"
+	EnquiryStatusContacted EnquiryStatus = "contacted"
+	EnquiryStatusQualified EnquiryStatus = "qualified"
+	EnquiryStatusConverted EnquiryStatus = "converted"
+	EnquiryStatusDropped   EnquiryStatus = "dropped"
+)
+
+func (e *EnquiryStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = EnquiryStatus(s)
+	case string:
+		*e = EnquiryStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for EnquiryStatus: %T", src)
+	}
+	return nil
+}
+
+type NullEnquiryStatus struct {
+	EnquiryStatus EnquiryStatus `json:"enquiry_status"`
+	Valid         bool          `json:"valid"` // Valid is true if EnquiryStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullEnquiryStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.EnquiryStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.EnquiryStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullEnquiryStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.EnquiryStatus), nil
+}
+
+type ExpenseStatus string
+
+const (
+	ExpenseStatusDraft      ExpenseStatus = "draft"
+	ExpenseStatusSubmitted  ExpenseStatus = "submitted"
+	ExpenseStatusApproved   ExpenseStatus = "approved"
+	ExpenseStatusReimbursed ExpenseStatus = "reimbursed"
+	ExpenseStatusRejected   ExpenseStatus = "rejected"
+)
+
+func (e *ExpenseStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ExpenseStatus(s)
+	case string:
+		*e = ExpenseStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ExpenseStatus: %T", src)
+	}
+	return nil
+}
+
+type NullExpenseStatus struct {
+	ExpenseStatus ExpenseStatus `json:"expense_status"`
+	Valid         bool          `json:"valid"` // Valid is true if ExpenseStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullExpenseStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ExpenseStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ExpenseStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullExpenseStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ExpenseStatus), nil
+}
+
+type GenderType string
+
+const (
+	GenderTypeMale        GenderType = "male"
+	GenderTypeFemale      GenderType = "female"
+	GenderTypeOther       GenderType = "other"
+	GenderTypeUndisclosed GenderType = "undisclosed"
+)
+
+func (e *GenderType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = GenderType(s)
+	case string:
+		*e = GenderType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for GenderType: %T", src)
+	}
+	return nil
+}
+
+type NullGenderType struct {
+	GenderType GenderType `json:"gender_type"`
+	Valid      bool       `json:"valid"` // Valid is true if GenderType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullGenderType) Scan(value interface{}) error {
+	if value == nil {
+		ns.GenderType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.GenderType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullGenderType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.GenderType), nil
+}
+
+type InvoiceStatus string
+
+const (
+	InvoiceStatusDraft      InvoiceStatus = "draft"
+	InvoiceStatusIssued     InvoiceStatus = "issued"
+	InvoiceStatusPartlyPaid InvoiceStatus = "partly_paid"
+	InvoiceStatusPaid       InvoiceStatus = "paid"
+	InvoiceStatusOverdue    InvoiceStatus = "overdue"
+	InvoiceStatusCancelled  InvoiceStatus = "cancelled"
+)
+
+func (e *InvoiceStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = InvoiceStatus(s)
+	case string:
+		*e = InvoiceStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for InvoiceStatus: %T", src)
+	}
+	return nil
+}
+
+type NullInvoiceStatus struct {
+	InvoiceStatus InvoiceStatus `json:"invoice_status"`
+	Valid         bool          `json:"valid"` // Valid is true if InvoiceStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullInvoiceStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.InvoiceStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.InvoiceStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullInvoiceStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.InvoiceStatus), nil
+}
+
+type JournalStatus string
+
+const (
+	JournalStatusDraft    JournalStatus = "draft"
+	JournalStatusPosted   JournalStatus = "posted"
+	JournalStatusReversed JournalStatus = "reversed"
+)
+
+func (e *JournalStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = JournalStatus(s)
+	case string:
+		*e = JournalStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for JournalStatus: %T", src)
+	}
+	return nil
+}
+
+type NullJournalStatus struct {
+	JournalStatus JournalStatus `json:"journal_status"`
+	Valid         bool          `json:"valid"` // Valid is true if JournalStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullJournalStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.JournalStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.JournalStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullJournalStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.JournalStatus), nil
+}
+
+type LeadStatus string
+
+const (
+	LeadStatusNew         LeadStatus = "new"
+	LeadStatusContacted   LeadStatus = "contacted"
+	LeadStatusQualified   LeadStatus = "qualified"
+	LeadStatusProposal    LeadStatus = "proposal"
+	LeadStatusNegotiation LeadStatus = "negotiation"
+	LeadStatusWon         LeadStatus = "won"
+	LeadStatusLost        LeadStatus = "lost"
+)
+
+func (e *LeadStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = LeadStatus(s)
+	case string:
+		*e = LeadStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for LeadStatus: %T", src)
+	}
+	return nil
+}
+
+type NullLeadStatus struct {
+	LeadStatus LeadStatus `json:"lead_status"`
+	Valid      bool       `json:"valid"` // Valid is true if LeadStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullLeadStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.LeadStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.LeadStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullLeadStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.LeadStatus), nil
+}
+
+type LeaveRequestStatus string
+
+const (
+	LeaveRequestStatusPending   LeaveRequestStatus = "pending"
+	LeaveRequestStatusApproved  LeaveRequestStatus = "approved"
+	LeaveRequestStatusRejected  LeaveRequestStatus = "rejected"
+	LeaveRequestStatusCancelled LeaveRequestStatus = "cancelled"
+)
+
+func (e *LeaveRequestStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = LeaveRequestStatus(s)
+	case string:
+		*e = LeaveRequestStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for LeaveRequestStatus: %T", src)
+	}
+	return nil
+}
+
+type NullLeaveRequestStatus struct {
+	LeaveRequestStatus LeaveRequestStatus `json:"leave_request_status"`
+	Valid              bool               `json:"valid"` // Valid is true if LeaveRequestStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullLeaveRequestStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.LeaveRequestStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.LeaveRequestStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullLeaveRequestStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.LeaveRequestStatus), nil
+}
+
+type MilestoneStatus string
+
+const (
+	MilestoneStatusPending    MilestoneStatus = "pending"
+	MilestoneStatusInProgress MilestoneStatus = "in_progress"
+	MilestoneStatusCompleted  MilestoneStatus = "completed"
+	MilestoneStatusInvoiced   MilestoneStatus = "invoiced"
+)
+
+func (e *MilestoneStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = MilestoneStatus(s)
+	case string:
+		*e = MilestoneStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for MilestoneStatus: %T", src)
+	}
+	return nil
+}
+
+type NullMilestoneStatus struct {
+	MilestoneStatus MilestoneStatus `json:"milestone_status"`
+	Valid           bool            `json:"valid"` // Valid is true if MilestoneStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullMilestoneStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.MilestoneStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.MilestoneStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullMilestoneStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.MilestoneStatus), nil
+}
+
+type NumberKind string
+
+const (
+	NumberKindInvoice    NumberKind = "invoice"
+	NumberKindCreditNote NumberKind = "credit_note"
+	NumberKindQuotation  NumberKind = "quotation"
+	NumberKindReceipt    NumberKind = "receipt"
+	NumberKindVendorBill NumberKind = "vendor_bill"
+	NumberKindExpense    NumberKind = "expense"
+	NumberKindTicket     NumberKind = "ticket"
+	NumberKindProject    NumberKind = "project"
+	NumberKindEmployee   NumberKind = "employee"
+	NumberKindJournal    NumberKind = "journal"
+)
+
+func (e *NumberKind) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = NumberKind(s)
+	case string:
+		*e = NumberKind(s)
+	default:
+		return fmt.Errorf("unsupported scan type for NumberKind: %T", src)
+	}
+	return nil
+}
+
+type NullNumberKind struct {
+	NumberKind NumberKind `json:"number_kind"`
+	Valid      bool       `json:"valid"` // Valid is true if NumberKind is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullNumberKind) Scan(value interface{}) error {
+	if value == nil {
+		ns.NumberKind, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.NumberKind.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullNumberKind) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.NumberKind), nil
+}
+
+type OrganizationStatus string
+
+const (
+	OrganizationStatusActive    OrganizationStatus = "active"
+	OrganizationStatusSuspended OrganizationStatus = "suspended"
+	OrganizationStatusClosed    OrganizationStatus = "closed"
+)
+
+func (e *OrganizationStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = OrganizationStatus(s)
+	case string:
+		*e = OrganizationStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for OrganizationStatus: %T", src)
+	}
+	return nil
+}
+
+type NullOrganizationStatus struct {
+	OrganizationStatus OrganizationStatus `json:"organization_status"`
+	Valid              bool               `json:"valid"` // Valid is true if OrganizationStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullOrganizationStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.OrganizationStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.OrganizationStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullOrganizationStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.OrganizationStatus), nil
+}
+
+type PaymentMethod string
+
+const (
+	PaymentMethodCash         PaymentMethod = "cash"
+	PaymentMethodCheque       PaymentMethod = "cheque"
+	PaymentMethodBankTransfer PaymentMethod = "bank_transfer"
+	PaymentMethodUpi          PaymentMethod = "upi"
+	PaymentMethodCard         PaymentMethod = "card"
+	PaymentMethodOther        PaymentMethod = "other"
+)
+
+func (e *PaymentMethod) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PaymentMethod(s)
+	case string:
+		*e = PaymentMethod(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PaymentMethod: %T", src)
+	}
+	return nil
+}
+
+type NullPaymentMethod struct {
+	PaymentMethod PaymentMethod `json:"payment_method"`
+	Valid         bool          `json:"valid"` // Valid is true if PaymentMethod is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPaymentMethod) Scan(value interface{}) error {
+	if value == nil {
+		ns.PaymentMethod, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PaymentMethod.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPaymentMethod) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PaymentMethod), nil
+}
+
+type PayrollRunStatus string
+
+const (
+	PayrollRunStatusDraft      PayrollRunStatus = "draft"
+	PayrollRunStatusProcessing PayrollRunStatus = "processing"
+	PayrollRunStatusLocked     PayrollRunStatus = "locked"
+	PayrollRunStatusPaid       PayrollRunStatus = "paid"
+)
+
+func (e *PayrollRunStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PayrollRunStatus(s)
+	case string:
+		*e = PayrollRunStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PayrollRunStatus: %T", src)
+	}
+	return nil
+}
+
+type NullPayrollRunStatus struct {
+	PayrollRunStatus PayrollRunStatus `json:"payroll_run_status"`
+	Valid            bool             `json:"valid"` // Valid is true if PayrollRunStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPayrollRunStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.PayrollRunStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PayrollRunStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPayrollRunStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PayrollRunStatus), nil
+}
+
+type PeriodStatus string
+
+const (
+	PeriodStatusOpen   PeriodStatus = "open"
+	PeriodStatusClosed PeriodStatus = "closed"
+	PeriodStatusLocked PeriodStatus = "locked"
+)
+
+func (e *PeriodStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PeriodStatus(s)
+	case string:
+		*e = PeriodStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PeriodStatus: %T", src)
+	}
+	return nil
+}
+
+type NullPeriodStatus struct {
+	PeriodStatus PeriodStatus `json:"period_status"`
+	Valid        bool         `json:"valid"` // Valid is true if PeriodStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPeriodStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.PeriodStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PeriodStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPeriodStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PeriodStatus), nil
+}
+
+type PlanInterval string
+
+const (
+	PlanIntervalMonthly   PlanInterval = "monthly"
+	PlanIntervalQuarterly PlanInterval = "quarterly"
+	PlanIntervalYearly    PlanInterval = "yearly"
+)
+
+func (e *PlanInterval) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PlanInterval(s)
+	case string:
+		*e = PlanInterval(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PlanInterval: %T", src)
+	}
+	return nil
+}
+
+type NullPlanInterval struct {
+	PlanInterval PlanInterval `json:"plan_interval"`
+	Valid        bool         `json:"valid"` // Valid is true if PlanInterval is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPlanInterval) Scan(value interface{}) error {
+	if value == nil {
+		ns.PlanInterval, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PlanInterval.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPlanInterval) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PlanInterval), nil
+}
+
+type PortalType string
+
+const (
+	PortalTypePlatform PortalType = "platform"
+	PortalTypeApp      PortalType = "app"
+	PortalTypePortal   PortalType = "portal"
+)
+
+func (e *PortalType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PortalType(s)
+	case string:
+		*e = PortalType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PortalType: %T", src)
+	}
+	return nil
+}
+
+type NullPortalType struct {
+	PortalType PortalType `json:"portal_type"`
+	Valid      bool       `json:"valid"` // Valid is true if PortalType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPortalType) Scan(value interface{}) error {
+	if value == nil {
+		ns.PortalType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PortalType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPortalType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PortalType), nil
+}
+
+type PriorityLevel string
+
+const (
+	PriorityLevelLow    PriorityLevel = "low"
+	PriorityLevelMedium PriorityLevel = "medium"
+	PriorityLevelHigh   PriorityLevel = "high"
+	PriorityLevelUrgent PriorityLevel = "urgent"
+)
+
+func (e *PriorityLevel) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PriorityLevel(s)
+	case string:
+		*e = PriorityLevel(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PriorityLevel: %T", src)
+	}
+	return nil
+}
+
+type NullPriorityLevel struct {
+	PriorityLevel PriorityLevel `json:"priority_level"`
+	Valid         bool          `json:"valid"` // Valid is true if PriorityLevel is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPriorityLevel) Scan(value interface{}) error {
+	if value == nil {
+		ns.PriorityLevel, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PriorityLevel.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPriorityLevel) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PriorityLevel), nil
+}
+
+type ProjectStatus string
+
+const (
+	ProjectStatusPlanned   ProjectStatus = "planned"
+	ProjectStatusActive    ProjectStatus = "active"
+	ProjectStatusOnHold    ProjectStatus = "on_hold"
+	ProjectStatusCompleted ProjectStatus = "completed"
+	ProjectStatusCancelled ProjectStatus = "cancelled"
+)
+
+func (e *ProjectStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ProjectStatus(s)
+	case string:
+		*e = ProjectStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ProjectStatus: %T", src)
+	}
+	return nil
+}
+
+type NullProjectStatus struct {
+	ProjectStatus ProjectStatus `json:"project_status"`
+	Valid         bool          `json:"valid"` // Valid is true if ProjectStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullProjectStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ProjectStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ProjectStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullProjectStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ProjectStatus), nil
+}
+
+type QuotationStatus string
+
+const (
+	QuotationStatusDraft    QuotationStatus = "draft"
+	QuotationStatusSent     QuotationStatus = "sent"
+	QuotationStatusAccepted QuotationStatus = "accepted"
+	QuotationStatusRejected QuotationStatus = "rejected"
+	QuotationStatusExpired  QuotationStatus = "expired"
+)
+
+func (e *QuotationStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = QuotationStatus(s)
+	case string:
+		*e = QuotationStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for QuotationStatus: %T", src)
+	}
+	return nil
+}
+
+type NullQuotationStatus struct {
+	QuotationStatus QuotationStatus `json:"quotation_status"`
+	Valid           bool            `json:"valid"` // Valid is true if QuotationStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullQuotationStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.QuotationStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.QuotationStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullQuotationStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.QuotationStatus), nil
+}
+
+type SalaryComponentType string
+
+const (
+	SalaryComponentTypeEarning              SalaryComponentType = "earning"
+	SalaryComponentTypeDeduction            SalaryComponentType = "deduction"
+	SalaryComponentTypeEmployerContribution SalaryComponentType = "employer_contribution"
+)
+
+func (e *SalaryComponentType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = SalaryComponentType(s)
+	case string:
+		*e = SalaryComponentType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for SalaryComponentType: %T", src)
+	}
+	return nil
+}
+
+type NullSalaryComponentType struct {
+	SalaryComponentType SalaryComponentType `json:"salary_component_type"`
+	Valid               bool                `json:"valid"` // Valid is true if SalaryComponentType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullSalaryComponentType) Scan(value interface{}) error {
+	if value == nil {
+		ns.SalaryComponentType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.SalaryComponentType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullSalaryComponentType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.SalaryComponentType), nil
+}
+
+type TaskStatus string
+
+const (
+	TaskStatusTodo       TaskStatus = "todo"
+	TaskStatusInProgress TaskStatus = "in_progress"
+	TaskStatusBlocked    TaskStatus = "blocked"
+	TaskStatusReview     TaskStatus = "review"
+	TaskStatusDone       TaskStatus = "done"
+	TaskStatusCancelled  TaskStatus = "cancelled"
+)
+
+func (e *TaskStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TaskStatus(s)
+	case string:
+		*e = TaskStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TaskStatus: %T", src)
+	}
+	return nil
+}
+
+type NullTaskStatus struct {
+	TaskStatus TaskStatus `json:"task_status"`
+	Valid      bool       `json:"valid"` // Valid is true if TaskStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTaskStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.TaskStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TaskStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTaskStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TaskStatus), nil
+}
+
+type TaxKind string
+
+const (
+	TaxKindGst  TaxKind = "gst"
+	TaxKindCess TaxKind = "cess"
+	TaxKindTds  TaxKind = "tds"
+	TaxKindTcs  TaxKind = "tcs"
+)
+
+func (e *TaxKind) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TaxKind(s)
+	case string:
+		*e = TaxKind(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TaxKind: %T", src)
+	}
+	return nil
+}
+
+type NullTaxKind struct {
+	TaxKind TaxKind `json:"tax_kind"`
+	Valid   bool    `json:"valid"` // Valid is true if TaxKind is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTaxKind) Scan(value interface{}) error {
+	if value == nil {
+		ns.TaxKind, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TaxKind.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTaxKind) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TaxKind), nil
+}
+
+type TicketStatus string
+
+const (
+	TicketStatusOpen       TicketStatus = "open"
+	TicketStatusInProgress TicketStatus = "in_progress"
+	TicketStatusWaiting    TicketStatus = "waiting"
+	TicketStatusResolved   TicketStatus = "resolved"
+	TicketStatusClosed     TicketStatus = "closed"
+)
+
+func (e *TicketStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TicketStatus(s)
+	case string:
+		*e = TicketStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TicketStatus: %T", src)
+	}
+	return nil
+}
+
+type NullTicketStatus struct {
+	TicketStatus TicketStatus `json:"ticket_status"`
+	Valid        bool         `json:"valid"` // Valid is true if TicketStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTicketStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.TicketStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TicketStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTicketStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TicketStatus), nil
+}
+
+type TimesheetStatus string
+
+const (
+	TimesheetStatusDraft     TimesheetStatus = "draft"
+	TimesheetStatusSubmitted TimesheetStatus = "submitted"
+	TimesheetStatusApproved  TimesheetStatus = "approved"
+	TimesheetStatusRejected  TimesheetStatus = "rejected"
+)
+
+func (e *TimesheetStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TimesheetStatus(s)
+	case string:
+		*e = TimesheetStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TimesheetStatus: %T", src)
+	}
+	return nil
+}
+
+type NullTimesheetStatus struct {
+	TimesheetStatus TimesheetStatus `json:"timesheet_status"`
+	Valid           bool            `json:"valid"` // Valid is true if TimesheetStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTimesheetStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.TimesheetStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TimesheetStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTimesheetStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TimesheetStatus), nil
+}
+
+type UserStatus string
+
+const (
+	UserStatusActive    UserStatus = "active"
+	UserStatusInvited   UserStatus = "invited"
+	UserStatusSuspended UserStatus = "suspended"
+	UserStatusLocked    UserStatus = "locked"
+)
+
+func (e *UserStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = UserStatus(s)
+	case string:
+		*e = UserStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for UserStatus: %T", src)
+	}
+	return nil
+}
+
+type NullUserStatus struct {
+	UserStatus UserStatus `json:"user_status"`
+	Valid      bool       `json:"valid"` // Valid is true if UserStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullUserStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.UserStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.UserStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullUserStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.UserStatus), nil
+}
+
+type VendorBillStatus string
+
+const (
+	VendorBillStatusDraft      VendorBillStatus = "draft"
+	VendorBillStatusReceived   VendorBillStatus = "received"
+	VendorBillStatusApproved   VendorBillStatus = "approved"
+	VendorBillStatusPartlyPaid VendorBillStatus = "partly_paid"
+	VendorBillStatusPaid       VendorBillStatus = "paid"
+	VendorBillStatusCancelled  VendorBillStatus = "cancelled"
+)
+
+func (e *VendorBillStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = VendorBillStatus(s)
+	case string:
+		*e = VendorBillStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for VendorBillStatus: %T", src)
+	}
+	return nil
+}
+
+type NullVendorBillStatus struct {
+	VendorBillStatus VendorBillStatus `json:"vendor_bill_status"`
+	Valid            bool             `json:"valid"` // Valid is true if VendorBillStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullVendorBillStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.VendorBillStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.VendorBillStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullVendorBillStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.VendorBillStatus), nil
+}
+
+type VendorStatus string
+
+const (
+	VendorStatusActive      VendorStatus = "active"
+	VendorStatusInactive    VendorStatus = "inactive"
+	VendorStatusBlacklisted VendorStatus = "blacklisted"
+)
+
+func (e *VendorStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = VendorStatus(s)
+	case string:
+		*e = VendorStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for VendorStatus: %T", src)
+	}
+	return nil
+}
+
+type NullVendorStatus struct {
+	VendorStatus VendorStatus `json:"vendor_status"`
+	Valid        bool         `json:"valid"` // Valid is true if VendorStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullVendorStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.VendorStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.VendorStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullVendorStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.VendorStatus), nil
+}
+
+type Account struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	Code           string         `json:"code"`
+	Name           string         `json:"name"`
+	AccountType    AccountType    `json:"account_type"`
+	ParentID       *uuid.UUID     `json:"parent_id"`
+	IsGroup        bool           `json:"is_group"`
+	IsActive       bool           `json:"is_active"`
+	OpeningBalance pgtype.Numeric `json:"opening_balance"`
+	Currency       string         `json:"currency"`
+	Description    *string        `json:"description"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
+}
+
+type Asset struct {
+	OrganizationID  uuid.UUID      `json:"organization_id"`
+	ID              uuid.UUID      `json:"id"`
+	AssetTag        string         `json:"asset_tag"`
+	Name            string         `json:"name"`
+	Category        *string        `json:"category"`
+	Status          AssetStatus    `json:"status"`
+	SerialNumber    *string        `json:"serial_number"`
+	AssignedTo      *uuid.UUID     `json:"assigned_to"`
+	AssignedOn      *time.Time     `json:"assigned_on"`
+	VendorID        *uuid.UUID     `json:"vendor_id"`
+	PurchaseDate    *time.Time     `json:"purchase_date"`
+	PurchaseCost    pgtype.Numeric `json:"purchase_cost"`
+	SalvageValue    pgtype.Numeric `json:"salvage_value"`
+	UsefulLifeYears *int16         `json:"useful_life_years"`
+	WarrantyUntil   *time.Time     `json:"warranty_until"`
+	Location        *string        `json:"location"`
+	Notes           *string        `json:"notes"`
+	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
+	CreatedBy       *uuid.UUID     `json:"created_by"`
+	UpdatedBy       *uuid.UUID     `json:"updated_by"`
 }
 
 type Attendance struct {
-	OrganizationID uuid.UUID      `json:"organization_id"`
-	ID             uuid.UUID      `json:"id"`
-	EmployeeID     uuid.UUID      `json:"employee_id"`
-	OnDate         time.Time      `json:"on_date"`
-	Status         string         `json:"status"`
-	CheckIn        *time.Time     `json:"check_in"`
-	CheckOut       *time.Time     `json:"check_out"`
-	Hours          pgtype.Numeric `json:"hours"`
-	Note           *string        `json:"note"`
-	CreatedAt      time.Time      `json:"created_at"`
+	OrganizationID uuid.UUID        `json:"organization_id"`
+	ID             uuid.UUID        `json:"id"`
+	EmployeeID     uuid.UUID        `json:"employee_id"`
+	OnDate         time.Time        `json:"on_date"`
+	Status         AttendanceStatus `json:"status"`
+	CheckIn        *time.Time       `json:"check_in"`
+	CheckOut       *time.Time       `json:"check_out"`
+	WorkedHours    pgtype.Numeric   `json:"worked_hours"`
+	OvertimeHours  pgtype.Numeric   `json:"overtime_hours"`
+	Note           *string          `json:"note"`
+	CreatedAt      time.Time        `json:"created_at"`
+	UpdatedAt      time.Time        `json:"updated_at"`
+	CreatedBy      *uuid.UUID       `json:"created_by"`
+	UpdatedBy      *uuid.UUID       `json:"updated_by"`
 }
 
 type AuditLog struct {
@@ -43,7 +1640,7 @@ type AuditLog struct {
 	ID             uuid.UUID   `json:"id"`
 	ActorID        *uuid.UUID  `json:"actor_id"`
 	ActorLabel     string      `json:"actor_label"`
-	Action         string      `json:"action"`
+	Action         AuditAction `json:"action"`
 	EntityType     string      `json:"entity_type"`
 	EntityID       *uuid.UUID  `json:"entity_id"`
 	Before         []byte      `json:"before"`
@@ -51,23 +1648,131 @@ type AuditLog struct {
 	RequestID      *string     `json:"request_id"`
 	Ip             *netip.Addr `json:"ip"`
 	CreatedAt      time.Time   `json:"created_at"`
+	CreatedBy      *uuid.UUID  `json:"created_by"`
+}
+
+type AuditLog202608 struct {
+	OrganizationID uuid.UUID   `json:"organization_id"`
+	ID             uuid.UUID   `json:"id"`
+	ActorID        *uuid.UUID  `json:"actor_id"`
+	ActorLabel     string      `json:"actor_label"`
+	Action         AuditAction `json:"action"`
+	EntityType     string      `json:"entity_type"`
+	EntityID       *uuid.UUID  `json:"entity_id"`
+	Before         []byte      `json:"before"`
+	After          []byte      `json:"after"`
+	RequestID      *string     `json:"request_id"`
+	Ip             *netip.Addr `json:"ip"`
+	CreatedAt      time.Time   `json:"created_at"`
+	CreatedBy      *uuid.UUID  `json:"created_by"`
+}
+
+type AuditLog202609 struct {
+	OrganizationID uuid.UUID   `json:"organization_id"`
+	ID             uuid.UUID   `json:"id"`
+	ActorID        *uuid.UUID  `json:"actor_id"`
+	ActorLabel     string      `json:"actor_label"`
+	Action         AuditAction `json:"action"`
+	EntityType     string      `json:"entity_type"`
+	EntityID       *uuid.UUID  `json:"entity_id"`
+	Before         []byte      `json:"before"`
+	After          []byte      `json:"after"`
+	RequestID      *string     `json:"request_id"`
+	Ip             *netip.Addr `json:"ip"`
+	CreatedAt      time.Time   `json:"created_at"`
+	CreatedBy      *uuid.UUID  `json:"created_by"`
+}
+
+type AuditLog202610 struct {
+	OrganizationID uuid.UUID   `json:"organization_id"`
+	ID             uuid.UUID   `json:"id"`
+	ActorID        *uuid.UUID  `json:"actor_id"`
+	ActorLabel     string      `json:"actor_label"`
+	Action         AuditAction `json:"action"`
+	EntityType     string      `json:"entity_type"`
+	EntityID       *uuid.UUID  `json:"entity_id"`
+	Before         []byte      `json:"before"`
+	After          []byte      `json:"after"`
+	RequestID      *string     `json:"request_id"`
+	Ip             *netip.Addr `json:"ip"`
+	CreatedAt      time.Time   `json:"created_at"`
+	CreatedBy      *uuid.UUID  `json:"created_by"`
+}
+
+type AuditLog202611 struct {
+	OrganizationID uuid.UUID   `json:"organization_id"`
+	ID             uuid.UUID   `json:"id"`
+	ActorID        *uuid.UUID  `json:"actor_id"`
+	ActorLabel     string      `json:"actor_label"`
+	Action         AuditAction `json:"action"`
+	EntityType     string      `json:"entity_type"`
+	EntityID       *uuid.UUID  `json:"entity_id"`
+	Before         []byte      `json:"before"`
+	After          []byte      `json:"after"`
+	RequestID      *string     `json:"request_id"`
+	Ip             *netip.Addr `json:"ip"`
+	CreatedAt      time.Time   `json:"created_at"`
+	CreatedBy      *uuid.UUID  `json:"created_by"`
+}
+
+type AuditLog202612 struct {
+	OrganizationID uuid.UUID   `json:"organization_id"`
+	ID             uuid.UUID   `json:"id"`
+	ActorID        *uuid.UUID  `json:"actor_id"`
+	ActorLabel     string      `json:"actor_label"`
+	Action         AuditAction `json:"action"`
+	EntityType     string      `json:"entity_type"`
+	EntityID       *uuid.UUID  `json:"entity_id"`
+	Before         []byte      `json:"before"`
+	After          []byte      `json:"after"`
+	RequestID      *string     `json:"request_id"`
+	Ip             *netip.Addr `json:"ip"`
+	CreatedAt      time.Time   `json:"created_at"`
+	CreatedBy      *uuid.UUID  `json:"created_by"`
+}
+
+type AuditLogDefault struct {
+	OrganizationID uuid.UUID   `json:"organization_id"`
+	ID             uuid.UUID   `json:"id"`
+	ActorID        *uuid.UUID  `json:"actor_id"`
+	ActorLabel     string      `json:"actor_label"`
+	Action         AuditAction `json:"action"`
+	EntityType     string      `json:"entity_type"`
+	EntityID       *uuid.UUID  `json:"entity_id"`
+	Before         []byte      `json:"before"`
+	After          []byte      `json:"after"`
+	RequestID      *string     `json:"request_id"`
+	Ip             *netip.Addr `json:"ip"`
+	CreatedAt      time.Time   `json:"created_at"`
+	CreatedBy      *uuid.UUID  `json:"created_by"`
 }
 
 type Client struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	ID             uuid.UUID `json:"id"`
-	Name           string    `json:"name"`
-	LegalName      *string   `json:"legal_name"`
-	Gstin          *string   `json:"gstin"`
-	Pan            *string   `json:"pan"`
-	StateCode      *string   `json:"state_code"`
-	Address        *string   `json:"address"`
-	Email          *string   `json:"email"`
-	Phone          *string   `json:"phone"`
-	IsRegistered   bool      `json:"is_registered"`
-	Status         string    `json:"status"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	Code           string         `json:"code"`
+	Name           string         `json:"name"`
+	LegalName      *string        `json:"legal_name"`
+	Status         ClientStatus   `json:"status"`
+	Gstin          *string        `json:"gstin"`
+	Pan            *string        `json:"pan"`
+	IsRegistered   bool           `json:"is_registered"`
+	StateCode      *string        `json:"state_code"`
+	Address        *string        `json:"address"`
+	City           *string        `json:"city"`
+	PostalCode     *string        `json:"postal_code"`
+	Country        string         `json:"country"`
+	Email          *string        `json:"email"`
+	Phone          *string        `json:"phone"`
+	Website        *string        `json:"website"`
+	Currency       string         `json:"currency"`
+	PaymentTerms   int16          `json:"payment_terms"`
+	CreditLimit    pgtype.Numeric `json:"credit_limit"`
+	OwnerID        *uuid.UUID     `json:"owner_id"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
 }
 
 type ClientContact struct {
@@ -76,89 +1781,149 @@ type ClientContact struct {
 	ClientID       uuid.UUID  `json:"client_id"`
 	UserID         *uuid.UUID `json:"user_id"`
 	FullName       string     `json:"full_name"`
+	Designation    *string    `json:"designation"`
 	Email          *string    `json:"email"`
 	Phone          *string    `json:"phone"`
 	IsPrimary      bool       `json:"is_primary"`
 	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	CreatedBy      *uuid.UUID `json:"created_by"`
+	UpdatedBy      *uuid.UUID `json:"updated_by"`
 }
 
 type Department struct {
-	ID             uuid.UUID `json:"id"`
-	Name           string    `json:"name"`
-	CreatedAt      time.Time `json:"created_at"`
-	OrganizationID uuid.UUID `json:"organization_id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	ID             uuid.UUID  `json:"id"`
+	Code           *string    `json:"code"`
+	Name           string     `json:"name"`
+	ParentID       *uuid.UUID `json:"parent_id"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	CreatedBy      *uuid.UUID `json:"created_by"`
+	UpdatedBy      *uuid.UUID `json:"updated_by"`
 }
 
 type Designation struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	ID             uuid.UUID `json:"id"`
-	Name           string    `json:"name"`
-	Grade          *string   `json:"grade"`
-	CreatedAt      time.Time `json:"created_at"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	ID             uuid.UUID  `json:"id"`
+	Name           string     `json:"name"`
+	Grade          *string    `json:"grade"`
+	Level          *int16     `json:"level"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	CreatedBy      *uuid.UUID `json:"created_by"`
+	UpdatedBy      *uuid.UUID `json:"updated_by"`
 }
 
 type Document struct {
-	OrganizationID  uuid.UUID  `json:"organization_id"`
-	ID              uuid.UUID  `json:"id"`
-	EntityType      string     `json:"entity_type"`
-	EntityID        *uuid.UUID `json:"entity_id"`
-	FileName        string     `json:"file_name"`
-	StorageKey      string     `json:"storage_key"`
-	MimeType        *string    `json:"mime_type"`
-	SizeBytes       *int64     `json:"size_bytes"`
-	UploadedBy      *uuid.UUID `json:"uploaded_by"`
-	IsClientVisible bool       `json:"is_client_visible"`
-	CreatedAt       time.Time  `json:"created_at"`
+	OrganizationID uuid.UUID          `json:"organization_id"`
+	ID             uuid.UUID          `json:"id"`
+	EntityType     string             `json:"entity_type"`
+	EntityID       *uuid.UUID         `json:"entity_id"`
+	FileName       string             `json:"file_name"`
+	StorageKey     string             `json:"storage_key"`
+	MimeType       *string            `json:"mime_type"`
+	SizeBytes      *int64             `json:"size_bytes"`
+	Checksum       *string            `json:"checksum"`
+	Visibility     DocumentVisibility `json:"visibility"`
+	UploadedBy     *uuid.UUID         `json:"uploaded_by"`
+	CreatedAt      time.Time          `json:"created_at"`
+	UpdatedAt      time.Time          `json:"updated_at"`
+	CreatedBy      *uuid.UUID         `json:"created_by"`
+	UpdatedBy      *uuid.UUID         `json:"updated_by"`
 }
 
 type Employee struct {
-	ID             uuid.UUID  `json:"id"`
-	DepartmentID   *uuid.UUID `json:"department_id"`
-	FullName       string     `json:"full_name"`
-	Email          string     `json:"email"`
-	Title          *string    `json:"title"`
-	Status         string     `json:"status"`
-	HiredOn        *time.Time `json:"hired_on"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	DesignationID  *uuid.UUID `json:"designation_id"`
-	ManagerID      *uuid.UUID `json:"manager_id"`
-	Phone          *string    `json:"phone"`
-	Pan            *string    `json:"pan"`
-	AadhaarLast4   *string    `json:"aadhaar_last4"`
-	PfNumber       *string    `json:"pf_number"`
-	EsiNumber      *string    `json:"esi_number"`
-	BankAccount    *string    `json:"bank_account"`
-	BankIfsc       *string    `json:"bank_ifsc"`
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	EmployeeCode   string         `json:"employee_code"`
+	UserID         *uuid.UUID     `json:"user_id"`
+	DepartmentID   *uuid.UUID     `json:"department_id"`
+	TeamID         *uuid.UUID     `json:"team_id"`
+	DesignationID  *uuid.UUID     `json:"designation_id"`
+	ManagerID      *uuid.UUID     `json:"manager_id"`
+	FullName       string         `json:"full_name"`
+	Email          string         `json:"email"`
+	Phone          *string        `json:"phone"`
+	Gender         GenderType     `json:"gender"`
+	DateOfBirth    *time.Time     `json:"date_of_birth"`
+	Status         EmployeeStatus `json:"status"`
+	EmploymentType EmploymentType `json:"employment_type"`
+	HiredOn        *time.Time     `json:"hired_on"`
+	ConfirmedOn    *time.Time     `json:"confirmed_on"`
+	ExitedOn       *time.Time     `json:"exited_on"`
+	Pan            *string        `json:"pan"`
+	AadhaarLast4   *string        `json:"aadhaar_last4"`
+	Uan            *string        `json:"uan"`
+	PfNumber       *string        `json:"pf_number"`
+	EsiNumber      *string        `json:"esi_number"`
+	BankAccount    *string        `json:"bank_account"`
+	BankIfsc       *string        `json:"bank_ifsc"`
+	Address        *string        `json:"address"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
+}
+
+type Enquiry struct {
+	OrganizationID uuid.UUID     `json:"organization_id"`
+	ID             uuid.UUID     `json:"id"`
+	Reference      string        `json:"reference"`
+	ContactName    string        `json:"contact_name"`
+	CompanyName    *string       `json:"company_name"`
+	Email          *string       `json:"email"`
+	Phone          *string       `json:"phone"`
+	Source         *string       `json:"source"`
+	Subject        *string       `json:"subject"`
+	Message        *string       `json:"message"`
+	Status         EnquiryStatus `json:"status"`
+	OwnerID        *uuid.UUID    `json:"owner_id"`
+	ReceivedAt     time.Time     `json:"received_at"`
+	CreatedAt      time.Time     `json:"created_at"`
+	UpdatedAt      time.Time     `json:"updated_at"`
+	CreatedBy      *uuid.UUID    `json:"created_by"`
+	UpdatedBy      *uuid.UUID    `json:"updated_by"`
 }
 
 type Expense struct {
 	OrganizationID uuid.UUID      `json:"organization_id"`
 	ID             uuid.UUID      `json:"id"`
+	EmployeeID     *uuid.UUID     `json:"employee_id"`
 	VendorID       *uuid.UUID     `json:"vendor_id"`
-	CategoryID     *uuid.UUID     `json:"category_id"`
 	ProjectID      *uuid.UUID     `json:"project_id"`
+	AccountID      *uuid.UUID     `json:"account_id"`
+	Number         string         `json:"number"`
+	Status         ExpenseStatus  `json:"status"`
 	IncurredOn     time.Time      `json:"incurred_on"`
+	Category       *string        `json:"category"`
 	Description    string         `json:"description"`
 	Amount         pgtype.Numeric `json:"amount"`
-	GstAmount      pgtype.Numeric `json:"gst_amount"`
-	TdsSection     *string        `json:"tds_section"`
-	TdsRate        pgtype.Numeric `json:"tds_rate"`
-	TdsAmount      pgtype.Numeric `json:"tds_amount"`
+	TaxAmount      pgtype.Numeric `json:"tax_amount"`
 	Total          pgtype.Numeric `json:"total"`
-	PaymentStatus  string         `json:"payment_status"`
 	IsBillable     bool           `json:"is_billable"`
+	InvoicedAt     *time.Time     `json:"invoiced_at"`
 	ReceiptRef     *string        `json:"receipt_ref"`
+	ApprovedBy     *uuid.UUID     `json:"approved_by"`
+	ApprovedAt     *time.Time     `json:"approved_at"`
+	ReimbursedAt   *time.Time     `json:"reimbursed_at"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
 }
 
-type ExpenseCategory struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	ID             uuid.UUID `json:"id"`
-	Name           string    `json:"name"`
-	CreatedAt      time.Time `json:"created_at"`
+type FeatureFlag struct {
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	ID             uuid.UUID  `json:"id"`
+	Key            string     `json:"key"`
+	IsEnabled      bool       `json:"is_enabled"`
+	Value          []byte     `json:"value"`
+	Description    *string    `json:"description"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	CreatedBy      *uuid.UUID `json:"created_by"`
+	UpdatedBy      *uuid.UUID `json:"updated_by"`
 }
 
 type Invoice struct {
@@ -168,15 +1933,18 @@ type Invoice struct {
 	ProjectID      *uuid.UUID     `json:"project_id"`
 	QuotationID    *uuid.UUID     `json:"quotation_id"`
 	Number         string         `json:"number"`
+	Status         InvoiceStatus  `json:"status"`
 	IssueDate      time.Time      `json:"issue_date"`
 	DueDate        *time.Time     `json:"due_date"`
-	Status         string         `json:"status"`
+	Currency       string         `json:"currency"`
+	ExchangeRate   pgtype.Numeric `json:"exchange_rate"`
 	PlaceOfSupply  *string        `json:"place_of_supply"`
 	IsInterstate   bool           `json:"is_interstate"`
 	ReverseCharge  bool           `json:"reverse_charge"`
-	Currency       string         `json:"currency"`
+	IsExport       bool           `json:"is_export"`
 	Subtotal       pgtype.Numeric `json:"subtotal"`
 	DiscountTotal  pgtype.Numeric `json:"discount_total"`
+	TaxableTotal   pgtype.Numeric `json:"taxable_total"`
 	CgstTotal      pgtype.Numeric `json:"cgst_total"`
 	SgstTotal      pgtype.Numeric `json:"sgst_total"`
 	IgstTotal      pgtype.Numeric `json:"igst_total"`
@@ -184,24 +1952,30 @@ type Invoice struct {
 	RoundOff       pgtype.Numeric `json:"round_off"`
 	Total          pgtype.Numeric `json:"total"`
 	AmountPaid     pgtype.Numeric `json:"amount_paid"`
+	AmountDue      pgtype.Numeric `json:"amount_due"`
+	Terms          *string        `json:"terms"`
 	Notes          *string        `json:"notes"`
 	IssuedAt       *time.Time     `json:"issued_at"`
+	CancelledAt    *time.Time     `json:"cancelled_at"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
 }
 
-type InvoiceItem struct {
+type InvoiceLine struct {
 	OrganizationID uuid.UUID      `json:"organization_id"`
 	ID             uuid.UUID      `json:"id"`
 	InvoiceID      uuid.UUID      `json:"invoice_id"`
-	ItemID         *uuid.UUID     `json:"item_id"`
-	LineNo         int32          `json:"line_no"`
+	TaxRateID      *uuid.UUID     `json:"tax_rate_id"`
+	LineNo         int16          `json:"line_no"`
 	Description    string         `json:"description"`
 	HsnSac         *string        `json:"hsn_sac"`
 	Quantity       pgtype.Numeric `json:"quantity"`
 	Unit           *string        `json:"unit"`
-	Rate           pgtype.Numeric `json:"rate"`
+	UnitPrice      pgtype.Numeric `json:"unit_price"`
 	DiscountPct    pgtype.Numeric `json:"discount_pct"`
+	DiscountAmount pgtype.Numeric `json:"discount_amount"`
 	TaxableValue   pgtype.Numeric `json:"taxable_value"`
 	CgstRate       pgtype.Numeric `json:"cgst_rate"`
 	CgstAmount     pgtype.Numeric `json:"cgst_amount"`
@@ -212,126 +1986,196 @@ type InvoiceItem struct {
 	CessRate       pgtype.Numeric `json:"cess_rate"`
 	CessAmount     pgtype.Numeric `json:"cess_amount"`
 	LineTotal      pgtype.Numeric `json:"line_total"`
-}
-
-type Item struct {
-	OrganizationID uuid.UUID      `json:"organization_id"`
-	ID             uuid.UUID      `json:"id"`
-	Code           string         `json:"code"`
-	Name           string         `json:"name"`
-	Kind           string         `json:"kind"`
-	HsnSac         *string        `json:"hsn_sac"`
-	Unit           string         `json:"unit"`
-	Rate           pgtype.Numeric `json:"rate"`
-	TaxRateID      *uuid.UUID     `json:"tax_rate_id"`
-	IsActive       bool           `json:"is_active"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
 }
 
-type LeaveRequest struct {
+type Journal struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	PeriodID       *uuid.UUID     `json:"period_id"`
+	Number         string         `json:"number"`
+	Status         JournalStatus  `json:"status"`
+	EntryDate      time.Time      `json:"entry_date"`
+	Narration      *string        `json:"narration"`
+	SourceType     *string        `json:"source_type"`
+	SourceID       *uuid.UUID     `json:"source_id"`
+	TotalDebit     pgtype.Numeric `json:"total_debit"`
+	TotalCredit    pgtype.Numeric `json:"total_credit"`
+	PostedAt       *time.Time     `json:"posted_at"`
+	ReversedBy     *uuid.UUID     `json:"reversed_by"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
+}
+
+type JournalLine struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	JournalID      uuid.UUID      `json:"journal_id"`
+	AccountID      uuid.UUID      `json:"account_id"`
+	LineNo         int16          `json:"line_no"`
+	Debit          pgtype.Numeric `json:"debit"`
+	Credit         pgtype.Numeric `json:"credit"`
+	Description    *string        `json:"description"`
+	ClientID       *uuid.UUID     `json:"client_id"`
+	VendorID       *uuid.UUID     `json:"vendor_id"`
+	ProjectID      *uuid.UUID     `json:"project_id"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
+}
+
+type Lead struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	EnquiryID      *uuid.UUID     `json:"enquiry_id"`
+	ClientID       *uuid.UUID     `json:"client_id"`
+	Title          string         `json:"title"`
+	ContactName    *string        `json:"contact_name"`
+	Email          *string        `json:"email"`
+	Phone          *string        `json:"phone"`
+	Source         *string        `json:"source"`
+	Status         LeadStatus     `json:"status"`
+	EstimatedValue pgtype.Numeric `json:"estimated_value"`
+	Probability    pgtype.Numeric `json:"probability"`
+	ExpectedClose  *time.Time     `json:"expected_close"`
+	OwnerID        *uuid.UUID     `json:"owner_id"`
+	LostReason     *string        `json:"lost_reason"`
+	ClosedAt       *time.Time     `json:"closed_at"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
+}
+
+type LeaveBalance struct {
 	OrganizationID uuid.UUID      `json:"organization_id"`
 	ID             uuid.UUID      `json:"id"`
 	EmployeeID     uuid.UUID      `json:"employee_id"`
 	LeaveTypeID    uuid.UUID      `json:"leave_type_id"`
-	FromDate       time.Time      `json:"from_date"`
-	ToDate         time.Time      `json:"to_date"`
-	Days           pgtype.Numeric `json:"days"`
-	Reason         *string        `json:"reason"`
-	Status         string         `json:"status"`
-	DecidedBy      *uuid.UUID     `json:"decided_by"`
-	DecidedAt      *time.Time     `json:"decided_at"`
+	FyLabel        string         `json:"fy_label"`
+	EntitledDays   pgtype.Numeric `json:"entitled_days"`
+	CarriedDays    pgtype.Numeric `json:"carried_days"`
+	UsedDays       pgtype.Numeric `json:"used_days"`
+	PendingDays    pgtype.Numeric `json:"pending_days"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
+}
+
+type LeaveRequest struct {
+	OrganizationID uuid.UUID          `json:"organization_id"`
+	ID             uuid.UUID          `json:"id"`
+	EmployeeID     uuid.UUID          `json:"employee_id"`
+	LeaveTypeID    uuid.UUID          `json:"leave_type_id"`
+	FromDate       time.Time          `json:"from_date"`
+	ToDate         time.Time          `json:"to_date"`
+	Days           pgtype.Numeric     `json:"days"`
+	Reason         *string            `json:"reason"`
+	Status         LeaveRequestStatus `json:"status"`
+	DecidedBy      *uuid.UUID         `json:"decided_by"`
+	DecidedAt      *time.Time         `json:"decided_at"`
+	DecisionNote   *string            `json:"decision_note"`
+	CreatedAt      time.Time          `json:"created_at"`
+	UpdatedAt      time.Time          `json:"updated_at"`
+	CreatedBy      *uuid.UUID         `json:"created_by"`
+	UpdatedBy      *uuid.UUID         `json:"updated_by"`
 }
 
 type LeaveType struct {
 	OrganizationID uuid.UUID      `json:"organization_id"`
 	ID             uuid.UUID      `json:"id"`
+	Code           string         `json:"code"`
 	Name           string         `json:"name"`
 	DaysPerYear    pgtype.Numeric `json:"days_per_year"`
 	IsPaid         bool           `json:"is_paid"`
+	CarryForward   bool           `json:"carry_forward"`
+	MaxCarryDays   pgtype.Numeric `json:"max_carry_days"`
 	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
 }
 
 type Milestone struct {
-	OrganizationID uuid.UUID      `json:"organization_id"`
-	ID             uuid.UUID      `json:"id"`
-	ProjectID      uuid.UUID      `json:"project_id"`
-	Name           string         `json:"name"`
-	Amount         pgtype.Numeric `json:"amount"`
-	DueOn          *time.Time     `json:"due_on"`
-	Status         string         `json:"status"`
-	CompletedAt    *time.Time     `json:"completed_at"`
-	CreatedAt      time.Time      `json:"created_at"`
+	OrganizationID uuid.UUID       `json:"organization_id"`
+	ID             uuid.UUID       `json:"id"`
+	ProjectID      uuid.UUID       `json:"project_id"`
+	Name           string          `json:"name"`
+	Description    *string         `json:"description"`
+	Status         MilestoneStatus `json:"status"`
+	Amount         pgtype.Numeric  `json:"amount"`
+	DueOn          *time.Time      `json:"due_on"`
+	CompletedAt    *time.Time      `json:"completed_at"`
+	Sequence       int16           `json:"sequence"`
+	CreatedAt      time.Time       `json:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
+	CreatedBy      *uuid.UUID      `json:"created_by"`
+	UpdatedBy      *uuid.UUID      `json:"updated_by"`
 }
 
-type Notification struct {
+type NumberSeries struct {
 	OrganizationID uuid.UUID  `json:"organization_id"`
 	ID             uuid.UUID  `json:"id"`
-	UserID         uuid.UUID  `json:"user_id"`
-	Kind           string     `json:"kind"`
-	Title          string     `json:"title"`
-	Body           *string    `json:"body"`
-	Link           *string    `json:"link"`
-	ReadAt         *time.Time `json:"read_at"`
+	Kind           NumberKind `json:"kind"`
+	FyLabel        string     `json:"fy_label"`
+	Prefix         string     `json:"prefix"`
+	Suffix         string     `json:"suffix"`
+	Padding        int16      `json:"padding"`
+	NextNumber     int64      `json:"next_number"`
 	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	CreatedBy      *uuid.UUID `json:"created_by"`
+	UpdatedBy      *uuid.UUID `json:"updated_by"`
 }
 
 type Organization struct {
-	ID        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
-	Slug      string    `json:"slug"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	LegalName *string   `json:"legal_name"`
-	Gstin     *string   `json:"gstin"`
-	Pan       *string   `json:"pan"`
-	StateCode *string   `json:"state_code"`
-	Address   *string   `json:"address"`
-	Phone     *string   `json:"phone"`
-	Email     *string   `json:"email"`
-}
-
-type OrganizationSubscription struct {
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	ID             uuid.UUID  `json:"id"`
-	PlanID         uuid.UUID  `json:"plan_id"`
-	Status         string     `json:"status"`
-	StartedOn      time.Time  `json:"started_on"`
-	RenewsOn       *time.Time `json:"renews_on"`
-	CancelledAt    *time.Time `json:"cancelled_at"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-}
-
-type Payment struct {
-	OrganizationID uuid.UUID      `json:"organization_id"`
-	ID             uuid.UUID      `json:"id"`
-	ClientID       uuid.UUID      `json:"client_id"`
-	InvoiceID      *uuid.UUID     `json:"invoice_id"`
-	ReceivedOn     time.Time      `json:"received_on"`
-	Amount         pgtype.Numeric `json:"amount"`
-	TdsDeducted    pgtype.Numeric `json:"tds_deducted"`
-	Method         string         `json:"method"`
-	Reference      *string        `json:"reference"`
-	Notes          *string        `json:"notes"`
-	CreatedAt      time.Time      `json:"created_at"`
+	ID           uuid.UUID          `json:"id"`
+	Name         string             `json:"name"`
+	Slug         string             `json:"slug"`
+	LegalName    *string            `json:"legal_name"`
+	Status       OrganizationStatus `json:"status"`
+	Gstin        *string            `json:"gstin"`
+	Pan          *string            `json:"pan"`
+	StateCode    *string            `json:"state_code"`
+	Address      *string            `json:"address"`
+	City         *string            `json:"city"`
+	PostalCode   *string            `json:"postal_code"`
+	Country      string             `json:"country"`
+	Phone        *string            `json:"phone"`
+	Email        *string            `json:"email"`
+	Currency     string             `json:"currency"`
+	Timezone     string             `json:"timezone"`
+	FyStartMonth int16              `json:"fy_start_month"`
+	CreatedAt    time.Time          `json:"created_at"`
+	UpdatedAt    time.Time          `json:"updated_at"`
+	CreatedBy    *uuid.UUID         `json:"created_by"`
+	UpdatedBy    *uuid.UUID         `json:"updated_by"`
 }
 
 type PayrollRun struct {
-	OrganizationID uuid.UUID      `json:"organization_id"`
-	ID             uuid.UUID      `json:"id"`
-	PeriodMonth    int32          `json:"period_month"`
-	PeriodYear     int32          `json:"period_year"`
-	Status         string         `json:"status"`
-	LockedAt       *time.Time     `json:"locked_at"`
-	PaidAt         *time.Time     `json:"paid_at"`
-	TotalGross     pgtype.Numeric `json:"total_gross"`
-	TotalNet       pgtype.Numeric `json:"total_net"`
-	CreatedAt      time.Time      `json:"created_at"`
-	UpdatedAt      time.Time      `json:"updated_at"`
+	OrganizationID uuid.UUID        `json:"organization_id"`
+	ID             uuid.UUID        `json:"id"`
+	PeriodYear     int16            `json:"period_year"`
+	PeriodMonth    int16            `json:"period_month"`
+	Status         PayrollRunStatus `json:"status"`
+	LockedAt       *time.Time       `json:"locked_at"`
+	PaidAt         *time.Time       `json:"paid_at"`
+	EmployeeCount  int32            `json:"employee_count"`
+	TotalGross     pgtype.Numeric   `json:"total_gross"`
+	TotalDeduction pgtype.Numeric   `json:"total_deduction"`
+	TotalNet       pgtype.Numeric   `json:"total_net"`
+	Notes          *string          `json:"notes"`
+	CreatedAt      time.Time        `json:"created_at"`
+	UpdatedAt      time.Time        `json:"updated_at"`
+	CreatedBy      *uuid.UUID       `json:"created_by"`
+	UpdatedBy      *uuid.UUID       `json:"updated_by"`
 }
 
 type Payslip struct {
@@ -339,10 +2183,12 @@ type Payslip struct {
 	ID              uuid.UUID      `json:"id"`
 	PayrollRunID    uuid.UUID      `json:"payroll_run_id"`
 	EmployeeID      uuid.UUID      `json:"employee_id"`
-	DaysPaid        pgtype.Numeric `json:"days_paid"`
+	PayableDays     pgtype.Numeric `json:"payable_days"`
+	LopDays         pgtype.Numeric `json:"lop_days"`
 	Basic           pgtype.Numeric `json:"basic"`
 	Hra             pgtype.Numeric `json:"hra"`
 	Allowances      pgtype.Numeric `json:"allowances"`
+	Overtime        pgtype.Numeric `json:"overtime"`
 	Gross           pgtype.Numeric `json:"gross"`
 	PfEmployee      pgtype.Numeric `json:"pf_employee"`
 	PfEmployer      pgtype.Numeric `json:"pf_employer"`
@@ -351,32 +2197,45 @@ type Payslip struct {
 	ProfessionalTax pgtype.Numeric `json:"professional_tax"`
 	Tds             pgtype.Numeric `json:"tds"`
 	OtherDeduction  pgtype.Numeric `json:"other_deduction"`
+	TotalDeduction  pgtype.Numeric `json:"total_deduction"`
 	NetPay          pgtype.Numeric `json:"net_pay"`
+	Breakdown       []byte         `json:"breakdown"`
 	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
+	CreatedBy       *uuid.UUID     `json:"created_by"`
+	UpdatedBy       *uuid.UUID     `json:"updated_by"`
+}
+
+type Period struct {
+	OrganizationID uuid.UUID    `json:"organization_id"`
+	ID             uuid.UUID    `json:"id"`
+	FyLabel        string       `json:"fy_label"`
+	PeriodYear     int16        `json:"period_year"`
+	PeriodMonth    int16        `json:"period_month"`
+	StartsOn       time.Time    `json:"starts_on"`
+	EndsOn         time.Time    `json:"ends_on"`
+	Status         PeriodStatus `json:"status"`
+	ClosedAt       *time.Time   `json:"closed_at"`
+	ClosedBy       *uuid.UUID   `json:"closed_by"`
+	CreatedAt      time.Time    `json:"created_at"`
+	UpdatedAt      time.Time    `json:"updated_at"`
+	CreatedBy      *uuid.UUID   `json:"created_by"`
+	UpdatedBy      *uuid.UUID   `json:"updated_by"`
 }
 
 type Plan struct {
-	ID           uuid.UUID      `json:"id"`
-	Code         string         `json:"code"`
-	Name         string         `json:"name"`
-	PriceMonthly pgtype.Numeric `json:"price_monthly"`
-	MaxUsers     *int32         `json:"max_users"`
-	Features     []byte         `json:"features"`
-	IsActive     bool           `json:"is_active"`
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
-}
-
-type PlatformUser struct {
-	ID           uuid.UUID  `json:"id"`
-	Email        string     `json:"email"`
-	FullName     string     `json:"full_name"`
-	PasswordHash string     `json:"password_hash"`
-	Role         string     `json:"role"`
-	Status       string     `json:"status"`
-	LastLoginAt  *time.Time `json:"last_login_at"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
+	ID        uuid.UUID      `json:"id"`
+	Code      string         `json:"code"`
+	Name      string         `json:"name"`
+	Price     pgtype.Numeric `json:"price"`
+	Interval  PlanInterval   `json:"interval"`
+	MaxUsers  *int32         `json:"max_users"`
+	Features  []byte         `json:"features"`
+	IsActive  bool           `json:"is_active"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	CreatedBy *uuid.UUID     `json:"created_by"`
+	UpdatedBy *uuid.UUID     `json:"updated_by"`
 }
 
 type Project struct {
@@ -386,14 +2245,19 @@ type Project struct {
 	Code           string         `json:"code"`
 	Name           string         `json:"name"`
 	Description    *string        `json:"description"`
-	Status         string         `json:"status"`
-	BillingType    string         `json:"billing_type"`
-	Budget         pgtype.Numeric `json:"budget"`
+	Status         ProjectStatus  `json:"status"`
+	BillingType    BillingType    `json:"billing_type"`
+	ContractValue  pgtype.Numeric `json:"contract_value"`
+	HourlyRate     pgtype.Numeric `json:"hourly_rate"`
+	BudgetHours    pgtype.Numeric `json:"budget_hours"`
+	Currency       string         `json:"currency"`
 	StartsOn       *time.Time     `json:"starts_on"`
 	EndsOn         *time.Time     `json:"ends_on"`
 	ManagerID      *uuid.UUID     `json:"manager_id"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
 }
 
 type ProjectMember struct {
@@ -403,59 +2267,116 @@ type ProjectMember struct {
 	EmployeeID     uuid.UUID      `json:"employee_id"`
 	Role           *string        `json:"role"`
 	AllocationPct  pgtype.Numeric `json:"allocation_pct"`
+	BillRate       pgtype.Numeric `json:"bill_rate"`
+	JoinedOn       *time.Time     `json:"joined_on"`
+	LeftOn         *time.Time     `json:"left_on"`
 	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
 }
 
 type Quotation struct {
-	OrganizationID uuid.UUID      `json:"organization_id"`
-	ID             uuid.UUID      `json:"id"`
-	ClientID       uuid.UUID      `json:"client_id"`
-	ProjectID      *uuid.UUID     `json:"project_id"`
-	Number         string         `json:"number"`
-	IssueDate      time.Time      `json:"issue_date"`
-	ValidUntil     *time.Time     `json:"valid_until"`
-	Status         string         `json:"status"`
-	Subtotal       pgtype.Numeric `json:"subtotal"`
-	TaxTotal       pgtype.Numeric `json:"tax_total"`
-	Total          pgtype.Numeric `json:"total"`
-	Notes          *string        `json:"notes"`
-	CreatedAt      time.Time      `json:"created_at"`
-	UpdatedAt      time.Time      `json:"updated_at"`
+	OrganizationID uuid.UUID       `json:"organization_id"`
+	ID             uuid.UUID       `json:"id"`
+	ClientID       uuid.UUID       `json:"client_id"`
+	LeadID         *uuid.UUID      `json:"lead_id"`
+	ProjectID      *uuid.UUID      `json:"project_id"`
+	Number         string          `json:"number"`
+	Revision       int16           `json:"revision"`
+	Status         QuotationStatus `json:"status"`
+	IssueDate      time.Time       `json:"issue_date"`
+	ValidUntil     *time.Time      `json:"valid_until"`
+	Currency       string          `json:"currency"`
+	PlaceOfSupply  *string         `json:"place_of_supply"`
+	IsInterstate   bool            `json:"is_interstate"`
+	Subtotal       pgtype.Numeric  `json:"subtotal"`
+	DiscountTotal  pgtype.Numeric  `json:"discount_total"`
+	TaxTotal       pgtype.Numeric  `json:"tax_total"`
+	RoundOff       pgtype.Numeric  `json:"round_off"`
+	Total          pgtype.Numeric  `json:"total"`
+	Terms          *string         `json:"terms"`
+	Notes          *string         `json:"notes"`
+	SentAt         *time.Time      `json:"sent_at"`
+	DecidedAt      *time.Time      `json:"decided_at"`
+	CreatedAt      time.Time       `json:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
+	CreatedBy      *uuid.UUID      `json:"created_by"`
+	UpdatedBy      *uuid.UUID      `json:"updated_by"`
 }
 
-type QuotationItem struct {
+type QuotationLine struct {
 	OrganizationID uuid.UUID      `json:"organization_id"`
 	ID             uuid.UUID      `json:"id"`
 	QuotationID    uuid.UUID      `json:"quotation_id"`
-	ItemID         *uuid.UUID     `json:"item_id"`
-	LineNo         int32          `json:"line_no"`
+	TaxRateID      *uuid.UUID     `json:"tax_rate_id"`
+	LineNo         int16          `json:"line_no"`
 	Description    string         `json:"description"`
 	HsnSac         *string        `json:"hsn_sac"`
 	Quantity       pgtype.Numeric `json:"quantity"`
-	Rate           pgtype.Numeric `json:"rate"`
+	Unit           *string        `json:"unit"`
+	UnitPrice      pgtype.Numeric `json:"unit_price"`
 	DiscountPct    pgtype.Numeric `json:"discount_pct"`
+	DiscountAmount pgtype.Numeric `json:"discount_amount"`
 	TaxableValue   pgtype.Numeric `json:"taxable_value"`
 	TaxRate        pgtype.Numeric `json:"tax_rate"`
 	TaxAmount      pgtype.Numeric `json:"tax_amount"`
 	LineTotal      pgtype.Numeric `json:"line_total"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
+}
+
+type Receipt struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	ClientID       uuid.UUID      `json:"client_id"`
+	InvoiceID      *uuid.UUID     `json:"invoice_id"`
+	Number         string         `json:"number"`
+	ReceivedOn     time.Time      `json:"received_on"`
+	Amount         pgtype.Numeric `json:"amount"`
+	TdsDeducted    pgtype.Numeric `json:"tds_deducted"`
+	Method         PaymentMethod  `json:"method"`
+	Reference      *string        `json:"reference"`
+	BankAccount    *string        `json:"bank_account"`
+	Notes          *string        `json:"notes"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
 }
 
 type Role struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	ID             uuid.UUID `json:"id"`
-	Code           string    `json:"code"`
-	Name           string    `json:"name"`
-	IsSystem       bool      `json:"is_system"`
-	CreatedAt      time.Time `json:"created_at"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	ID             uuid.UUID  `json:"id"`
+	Code           string     `json:"code"`
+	Name           string     `json:"name"`
+	Description    *string    `json:"description"`
+	IsSystem       bool       `json:"is_system"`
+	Permissions    []byte     `json:"permissions"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	CreatedBy      *uuid.UUID `json:"created_by"`
+	UpdatedBy      *uuid.UUID `json:"updated_by"`
 }
 
-type RolePermission struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	ID             uuid.UUID `json:"id"`
-	RoleID         uuid.UUID `json:"role_id"`
-	Module         string    `json:"module"`
-	Action         string    `json:"action"`
-	CreatedAt      time.Time `json:"created_at"`
+type SalaryComponent struct {
+	OrganizationID    uuid.UUID           `json:"organization_id"`
+	ID                uuid.UUID           `json:"id"`
+	SalaryStructureID uuid.UUID           `json:"salary_structure_id"`
+	Code              string              `json:"code"`
+	Name              string              `json:"name"`
+	ComponentType     SalaryComponentType `json:"component_type"`
+	AmountMonthly     pgtype.Numeric      `json:"amount_monthly"`
+	PercentOf         *string             `json:"percent_of"`
+	PercentRate       pgtype.Numeric      `json:"percent_rate"`
+	IsTaxable         bool                `json:"is_taxable"`
+	Sequence          int16               `json:"sequence"`
+	CreatedAt         time.Time           `json:"created_at"`
+	UpdatedAt         time.Time           `json:"updated_at"`
+	CreatedBy         *uuid.UUID          `json:"created_by"`
+	UpdatedBy         *uuid.UUID          `json:"updated_by"`
 }
 
 type SalaryStructure struct {
@@ -463,14 +2384,17 @@ type SalaryStructure struct {
 	ID             uuid.UUID      `json:"id"`
 	EmployeeID     uuid.UUID      `json:"employee_id"`
 	EffectiveFrom  time.Time      `json:"effective_from"`
+	EffectiveTo    *time.Time     `json:"effective_to"`
 	CtcAnnual      pgtype.Numeric `json:"ctc_annual"`
-	Basic          pgtype.Numeric `json:"basic"`
-	Hra            pgtype.Numeric `json:"hra"`
-	SpecialAllow   pgtype.Numeric `json:"special_allow"`
-	OtherAllow     pgtype.Numeric `json:"other_allow"`
+	GrossMonthly   pgtype.Numeric `json:"gross_monthly"`
 	PfApplicable   bool           `json:"pf_applicable"`
 	EsiApplicable  bool           `json:"esi_applicable"`
+	PtApplicable   bool           `json:"pt_applicable"`
+	Notes          *string        `json:"notes"`
 	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
 }
 
 type Session struct {
@@ -483,6 +2407,21 @@ type Session struct {
 	ExpiresAt      time.Time   `json:"expires_at"`
 	RevokedAt      *time.Time  `json:"revoked_at"`
 	CreatedAt      time.Time   `json:"created_at"`
+	UpdatedAt      time.Time   `json:"updated_at"`
+	CreatedBy      *uuid.UUID  `json:"created_by"`
+	UpdatedBy      *uuid.UUID  `json:"updated_by"`
+}
+
+type Setting struct {
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	ID             uuid.UUID  `json:"id"`
+	Key            string     `json:"key"`
+	Value          []byte     `json:"value"`
+	Description    *string    `json:"description"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	CreatedBy      *uuid.UUID `json:"created_by"`
+	UpdatedBy      *uuid.UUID `json:"updated_by"`
 }
 
 type Task struct {
@@ -491,103 +2430,184 @@ type Task struct {
 	ProjectID      uuid.UUID      `json:"project_id"`
 	MilestoneID    *uuid.UUID     `json:"milestone_id"`
 	ParentTaskID   *uuid.UUID     `json:"parent_task_id"`
+	Reference      *string        `json:"reference"`
 	Title          string         `json:"title"`
 	Description    *string        `json:"description"`
+	Status         TaskStatus     `json:"status"`
+	Priority       PriorityLevel  `json:"priority"`
 	AssigneeID     *uuid.UUID     `json:"assignee_id"`
-	Status         string         `json:"status"`
-	Priority       string         `json:"priority"`
 	EstimateHours  pgtype.Numeric `json:"estimate_hours"`
+	LoggedHours    pgtype.Numeric `json:"logged_hours"`
+	StartsOn       *time.Time     `json:"starts_on"`
 	DueOn          *time.Time     `json:"due_on"`
 	CompletedAt    *time.Time     `json:"completed_at"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
 }
 
 type TaxRate struct {
 	OrganizationID uuid.UUID      `json:"organization_id"`
 	ID             uuid.UUID      `json:"id"`
+	Code           string         `json:"code"`
 	Name           string         `json:"name"`
+	Kind           TaxKind        `json:"kind"`
 	Rate           pgtype.Numeric `json:"rate"`
-	Kind           string         `json:"kind"`
+	CessRate       pgtype.Numeric `json:"cess_rate"`
+	TdsSection     *string        `json:"tds_section"`
 	IsActive       bool           `json:"is_active"`
 	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
+}
+
+type Team struct {
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	ID             uuid.UUID  `json:"id"`
+	DepartmentID   *uuid.UUID `json:"department_id"`
+	Name           string     `json:"name"`
+	LeadID         *uuid.UUID `json:"lead_id"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	CreatedBy      *uuid.UUID `json:"created_by"`
+	UpdatedBy      *uuid.UUID `json:"updated_by"`
 }
 
 type Ticket struct {
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	ID             uuid.UUID  `json:"id"`
-	ClientID       *uuid.UUID `json:"client_id"`
-	ProjectID      *uuid.UUID `json:"project_id"`
-	Number         string     `json:"number"`
-	Subject        string     `json:"subject"`
-	Description    *string    `json:"description"`
-	RaisedBy       *uuid.UUID `json:"raised_by"`
-	AssigneeID     *uuid.UUID `json:"assignee_id"`
-	Status         string     `json:"status"`
-	Priority       string     `json:"priority"`
-	DueAt          *time.Time `json:"due_at"`
-	ResolvedAt     *time.Time `json:"resolved_at"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-}
-
-type TicketComment struct {
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	ID             uuid.UUID  `json:"id"`
-	TicketID       uuid.UUID  `json:"ticket_id"`
-	AuthorID       *uuid.UUID `json:"author_id"`
-	Body           string     `json:"body"`
-	IsInternal     bool       `json:"is_internal"`
-	CreatedAt      time.Time  `json:"created_at"`
+	OrganizationID  uuid.UUID     `json:"organization_id"`
+	ID              uuid.UUID     `json:"id"`
+	ClientID        *uuid.UUID    `json:"client_id"`
+	ProjectID       *uuid.UUID    `json:"project_id"`
+	Number          string        `json:"number"`
+	Subject         string        `json:"subject"`
+	Description     *string       `json:"description"`
+	Status          TicketStatus  `json:"status"`
+	Priority        PriorityLevel `json:"priority"`
+	Category        *string       `json:"category"`
+	RaisedBy        *uuid.UUID    `json:"raised_by"`
+	AssigneeID      *uuid.UUID    `json:"assignee_id"`
+	DueAt           *time.Time    `json:"due_at"`
+	FirstResponseAt *time.Time    `json:"first_response_at"`
+	ResolvedAt      *time.Time    `json:"resolved_at"`
+	ClosedAt        *time.Time    `json:"closed_at"`
+	Resolution      *string       `json:"resolution"`
+	CreatedAt       time.Time     `json:"created_at"`
+	UpdatedAt       time.Time     `json:"updated_at"`
+	CreatedBy       *uuid.UUID    `json:"created_by"`
+	UpdatedBy       *uuid.UUID    `json:"updated_by"`
 }
 
 type Timesheet struct {
-	OrganizationID uuid.UUID      `json:"organization_id"`
-	ID             uuid.UUID      `json:"id"`
-	EmployeeID     uuid.UUID      `json:"employee_id"`
-	ProjectID      uuid.UUID      `json:"project_id"`
-	TaskID         *uuid.UUID     `json:"task_id"`
-	OnDate         time.Time      `json:"on_date"`
-	Hours          pgtype.Numeric `json:"hours"`
-	IsBillable     bool           `json:"is_billable"`
-	Note           *string        `json:"note"`
-	Status         string         `json:"status"`
-	CreatedAt      time.Time      `json:"created_at"`
+	OrganizationID uuid.UUID       `json:"organization_id"`
+	ID             uuid.UUID       `json:"id"`
+	EmployeeID     uuid.UUID       `json:"employee_id"`
+	ProjectID      uuid.UUID       `json:"project_id"`
+	TaskID         *uuid.UUID      `json:"task_id"`
+	OnDate         time.Time       `json:"on_date"`
+	Hours          pgtype.Numeric  `json:"hours"`
+	IsBillable     bool            `json:"is_billable"`
+	BillRate       pgtype.Numeric  `json:"bill_rate"`
+	BillableAmount pgtype.Numeric  `json:"billable_amount"`
+	InvoicedAt     *time.Time      `json:"invoiced_at"`
+	Description    *string         `json:"description"`
+	Status         TimesheetStatus `json:"status"`
+	ApprovedBy     *uuid.UUID      `json:"approved_by"`
+	ApprovedAt     *time.Time      `json:"approved_at"`
+	CreatedAt      time.Time       `json:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
+	CreatedBy      *uuid.UUID      `json:"created_by"`
+	UpdatedBy      *uuid.UUID      `json:"updated_by"`
 }
 
 type User struct {
 	OrganizationID uuid.UUID  `json:"organization_id"`
 	ID             uuid.UUID  `json:"id"`
-	EmployeeID     *uuid.UUID `json:"employee_id"`
 	Email          string     `json:"email"`
 	FullName       string     `json:"full_name"`
 	PasswordHash   string     `json:"password_hash"`
-	Portal         string     `json:"portal"`
-	Status         string     `json:"status"`
+	Portal         PortalType `json:"portal"`
+	Status         UserStatus `json:"status"`
+	Phone          *string    `json:"phone"`
+	AvatarUrl      *string    `json:"avatar_url"`
 	LastLoginAt    *time.Time `json:"last_login_at"`
+	FailedLogins   int32      `json:"failed_logins"`
+	LockedUntil    *time.Time `json:"locked_until"`
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`
+	CreatedBy      *uuid.UUID `json:"created_by"`
+	UpdatedBy      *uuid.UUID `json:"updated_by"`
 }
 
 type UserRole struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	ID             uuid.UUID `json:"id"`
-	UserID         uuid.UUID `json:"user_id"`
-	RoleID         uuid.UUID `json:"role_id"`
-	CreatedAt      time.Time `json:"created_at"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	ID             uuid.UUID  `json:"id"`
+	UserID         uuid.UUID  `json:"user_id"`
+	RoleID         uuid.UUID  `json:"role_id"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	CreatedBy      *uuid.UUID `json:"created_by"`
+	UpdatedBy      *uuid.UUID `json:"updated_by"`
 }
 
 type Vendor struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	ID             uuid.UUID `json:"id"`
-	Name           string    `json:"name"`
-	Gstin          *string   `json:"gstin"`
-	Pan            *string   `json:"pan"`
-	StateCode      *string   `json:"state_code"`
-	Address        *string   `json:"address"`
-	Email          *string   `json:"email"`
-	Phone          *string   `json:"phone"`
-	Status         string    `json:"status"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	Code           string         `json:"code"`
+	Name           string         `json:"name"`
+	LegalName      *string        `json:"legal_name"`
+	Status         VendorStatus   `json:"status"`
+	Gstin          *string        `json:"gstin"`
+	Pan            *string        `json:"pan"`
+	IsRegistered   bool           `json:"is_registered"`
+	TdsSection     *string        `json:"tds_section"`
+	TdsRate        pgtype.Numeric `json:"tds_rate"`
+	StateCode      *string        `json:"state_code"`
+	Address        *string        `json:"address"`
+	City           *string        `json:"city"`
+	PostalCode     *string        `json:"postal_code"`
+	Country        string         `json:"country"`
+	Email          *string        `json:"email"`
+	Phone          *string        `json:"phone"`
+	BankAccount    *string        `json:"bank_account"`
+	BankIfsc       *string        `json:"bank_ifsc"`
+	PaymentTerms   int16          `json:"payment_terms"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedBy      *uuid.UUID     `json:"created_by"`
+	UpdatedBy      *uuid.UUID     `json:"updated_by"`
+}
+
+type VendorBill struct {
+	OrganizationID uuid.UUID        `json:"organization_id"`
+	ID             uuid.UUID        `json:"id"`
+	VendorID       uuid.UUID        `json:"vendor_id"`
+	ProjectID      *uuid.UUID       `json:"project_id"`
+	Number         string           `json:"number"`
+	VendorRef      *string          `json:"vendor_ref"`
+	Status         VendorBillStatus `json:"status"`
+	BillDate       time.Time        `json:"bill_date"`
+	DueDate        *time.Time       `json:"due_date"`
+	PlaceOfSupply  *string          `json:"place_of_supply"`
+	IsInterstate   bool             `json:"is_interstate"`
+	ReverseCharge  bool             `json:"reverse_charge"`
+	Subtotal       pgtype.Numeric   `json:"subtotal"`
+	TaxableTotal   pgtype.Numeric   `json:"taxable_total"`
+	CgstTotal      pgtype.Numeric   `json:"cgst_total"`
+	SgstTotal      pgtype.Numeric   `json:"sgst_total"`
+	IgstTotal      pgtype.Numeric   `json:"igst_total"`
+	CessTotal      pgtype.Numeric   `json:"cess_total"`
+	TdsSection     *string          `json:"tds_section"`
+	TdsRate        pgtype.Numeric   `json:"tds_rate"`
+	TdsAmount      pgtype.Numeric   `json:"tds_amount"`
+	RoundOff       pgtype.Numeric   `json:"round_off"`
+	Total          pgtype.Numeric   `json:"total"`
+	AmountPaid     pgtype.Numeric   `json:"amount_paid"`
+	AmountDue      pgtype.Numeric   `json:"amount_due"`
+	Notes          *string          `json:"notes"`
+	CreatedAt      time.Time        `json:"created_at"`
+	UpdatedAt      time.Time        `json:"updated_at"`
+	CreatedBy      *uuid.UUID       `json:"created_by"`
+	UpdatedBy      *uuid.UUID       `json:"updated_by"`
 }

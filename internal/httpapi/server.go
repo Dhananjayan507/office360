@@ -14,19 +14,18 @@ import (
 	"github.com/Dhananjayan507/office360/internal/config"
 	"github.com/Dhananjayan507/office360/internal/db"
 	"github.com/Dhananjayan507/office360/internal/httpx"
-	"github.com/Dhananjayan507/office360/internal/platform/txn"
 )
 
 type Server struct {
 	cfg config.Config
-	txn *txn.Manager
+	txn *db.TxManager
 	// q is the non-transactional query set, for handlers whose work is a single
 	// statement. Anything spanning more than one goes through s.txn.
 	q *db.Queries
 }
 
 func NewServer(cfg config.Config, pool *pgxpool.Pool) *Server {
-	manager := txn.New(pool)
+	manager := db.NewTxManager(pool)
 	return &Server{cfg: cfg, txn: manager, q: manager.Queries()}
 }
 

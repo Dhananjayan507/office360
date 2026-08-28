@@ -1,0 +1,7 @@
+DROP TABLE IF EXISTS journal_lines;
+DROP TABLE IF EXISTS journals;
+DROP TABLE IF EXISTS expenses;
+DROP TABLE IF EXISTS vendor_bills;
+DROP TABLE IF EXISTS receipts;
+DROP TABLE IF EXISTS invoice_lines;
+DROP TABLE IF EXISTS invoices;

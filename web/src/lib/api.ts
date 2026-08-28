@@ -3,6 +3,7 @@ import type {
 	Department,
 	Employee,
 	EmployeeStatus,
+	EmploymentType,
 	Envelope,
 	ErrorKind,
 	Health,
@@ -129,11 +130,14 @@ export const getEmployee = (id: string, opts: Options = {}) =>
 	request<Employee>(`/api/v1/employees/${id}`, opts);
 
 export interface CreateEmployeeInput {
+	employee_code: string;
 	full_name: string;
 	email: string;
 	department_id?: string | null;
-	title?: string | null;
+	designation_id?: string | null;
+	phone?: string | null;
 	status?: EmployeeStatus;
+	employment_type?: EmploymentType;
 	/** YYYY-MM-DD */
 	hired_on?: string | null;
 }
