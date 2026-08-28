@@ -8,15 +8,18 @@ A multi-tenant ERP for Indian business operations, built to a 14-day structural
 plan. Three portals — Super Admin (`/platform`), Admin (`/app`), Client
 (`/portal`) — over one Go API and one Postgres database.
 
-**Currently mid-Day 2.** The server foundation and the tenancy foundation exist;
-auth and every business module do not.
+**Day 2 is complete.** The schema exists in full — 41 tables, of which 38 are
+tenant-scoped — along with the transaction manager. Auth and every business
+module do not exist yet.
 
-Day 2 is two thirds done: `organizations`, `organization_id` on every business
-table, and the transaction manager are in and verified. The remaining third is
-the full table set — there are two business tables against roughly thirty-five
-the plan calls for. New tables must follow the tenancy conventions below from
-the first migration; retrofitting them later is the one mistake that genuinely
-costs time.
+The tables were derived from the module names in the README rather than from the
+plan document, which was not to hand. Names and columns may need correcting
+against the plan; the tenancy conventions below are what matter and are applied
+without exception. Verify with the audit queries in *Checking tenancy* before
+trusting any new table.
+
+Day 3 is authentication; Day 4 is `authz`, `tenant` and `audit`, gated on an
+automated test proving one organisation cannot read another's data.
 
 ## Commands
 
@@ -115,6 +118,44 @@ header, resolved in exactly one place — `currentOrganization` in
 `internal/httpapi/tenant.go`. It fails closed. Day 4 replaces that function's
 body with a read of the verified claim; no call site changes. Do not read the
 header anywhere else, and do not add a default.
+
+### Checking tenancy
+
+After adding a table, prove the conventions hold rather than assuming. Run these
+in `./make.ps1 psql`. Both must return zero rows.
+
+A foreign key into a tenant table that does not carry `organization_id` — the
+cross-tenant leak rule 3 exists to prevent:
+
+```sql
+SELECT con.conname, src.relname AS from_table, tgt.relname AS to_table
+FROM pg_constraint con
+JOIN pg_class src ON src.oid = con.conrelid
+JOIN pg_class tgt ON tgt.oid = con.confrelid
+JOIN pg_namespace n ON n.oid = src.relnamespace
+WHERE con.contype = 'f' AND n.nspname = 'public'
+  AND EXISTS (SELECT 1 FROM pg_attribute a
+              WHERE a.attrelid = con.confrelid AND a.attname = 'organization_id' AND a.attnum > 0)
+  AND NOT EXISTS (SELECT 1 FROM pg_attribute a
+                  WHERE a.attrelid = con.conrelid AND a.attname = 'organization_id'
+                    AND a.attnum = ANY (con.conkey));
+```
+
+A business table with no `organization_id` at all. Only `organizations`, `plans`,
+`platform_users` and `schema_migrations` may appear:
+
+```sql
+SELECT t.table_name FROM information_schema.tables t
+WHERE t.table_schema = 'public' AND t.table_type = 'BASE TABLE'
+  AND NOT EXISTS (SELECT 1 FROM information_schema.columns c
+                  WHERE c.table_schema = 'public' AND c.table_name = t.table_name
+                    AND c.column_name = 'organization_id');
+```
+
+A third query, for unique indexes missing `organization_id`, is worth running but
+reads differently: uuid primary keys legitimately appear, and so does
+`sessions_token_hash_key`, where global uniqueness is the point. Anything else in
+that list is a bug.
 
 ### Transactions
 

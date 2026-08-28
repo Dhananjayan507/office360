@@ -221,14 +221,18 @@ API fails closed rather than falling back to a default.
 Day 1 is complete: toolchain, repository, folder tree, server foundation with
 envelopes and typed errors, health and ping.
 
-Day 2 is two thirds complete. `organizations`, `organization_id` on every
-business table with organisation-scoped constraints, and the transaction manager
-are in and verified against Postgres 16.14 — including cross-tenant reads,
-updates and deletes all returning 404 with a second organisation present.
+Day 2 is complete: multi-tenancy, the transaction manager, and the full schema —
+41 tables, 38 of them tenant-scoped, across identity, people, payroll, clients,
+delivery, revenue, finance and operations.
 
-Outstanding on Day 2: **the full table set.** There are two business tables
-against roughly thirty-five the plan calls for. Any new table must follow the
-tenancy conventions above from its first migration.
+Verified against Postgres 16.14. Cross-tenant reads, updates and deletes all
+return 404 with a second organisation present, and a schema audit confirms every
+foreign key into a tenant table carries `organization_id`.
+
+One caveat worth knowing: the table set in migration `000003` was derived from
+the module names in this README, not from the build plan. Table and column names
+may need correcting against it. The tenancy conventions above hold regardless,
+which is the part that is expensive to change later.
 
 Still absent: authentication (Day 3), the `authz`/`tenant`/`audit` packages and
 the automated isolation test (Day 4), and every business module (Day 6+). The

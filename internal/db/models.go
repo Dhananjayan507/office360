@@ -5,16 +5,110 @@
 package db
 
 import (
+	"net/netip"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type Approval struct {
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	ID             uuid.UUID  `json:"id"`
+	EntityType     string     `json:"entity_type"`
+	EntityID       uuid.UUID  `json:"entity_id"`
+	StepNo         int32      `json:"step_no"`
+	ApproverID     *uuid.UUID `json:"approver_id"`
+	Status         string     `json:"status"`
+	Comment        *string    `json:"comment"`
+	DecidedAt      *time.Time `json:"decided_at"`
+	CreatedAt      time.Time  `json:"created_at"`
+}
+
+type Attendance struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	EmployeeID     uuid.UUID      `json:"employee_id"`
+	OnDate         time.Time      `json:"on_date"`
+	Status         string         `json:"status"`
+	CheckIn        *time.Time     `json:"check_in"`
+	CheckOut       *time.Time     `json:"check_out"`
+	Hours          pgtype.Numeric `json:"hours"`
+	Note           *string        `json:"note"`
+	CreatedAt      time.Time      `json:"created_at"`
+}
+
+type AuditLog struct {
+	OrganizationID uuid.UUID   `json:"organization_id"`
+	ID             uuid.UUID   `json:"id"`
+	ActorID        *uuid.UUID  `json:"actor_id"`
+	ActorLabel     string      `json:"actor_label"`
+	Action         string      `json:"action"`
+	EntityType     string      `json:"entity_type"`
+	EntityID       *uuid.UUID  `json:"entity_id"`
+	Before         []byte      `json:"before"`
+	After          []byte      `json:"after"`
+	RequestID      *string     `json:"request_id"`
+	Ip             *netip.Addr `json:"ip"`
+	CreatedAt      time.Time   `json:"created_at"`
+}
+
+type Client struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	ID             uuid.UUID `json:"id"`
+	Name           string    `json:"name"`
+	LegalName      *string   `json:"legal_name"`
+	Gstin          *string   `json:"gstin"`
+	Pan            *string   `json:"pan"`
+	StateCode      *string   `json:"state_code"`
+	Address        *string   `json:"address"`
+	Email          *string   `json:"email"`
+	Phone          *string   `json:"phone"`
+	IsRegistered   bool      `json:"is_registered"`
+	Status         string    `json:"status"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+type ClientContact struct {
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	ID             uuid.UUID  `json:"id"`
+	ClientID       uuid.UUID  `json:"client_id"`
+	UserID         *uuid.UUID `json:"user_id"`
+	FullName       string     `json:"full_name"`
+	Email          *string    `json:"email"`
+	Phone          *string    `json:"phone"`
+	IsPrimary      bool       `json:"is_primary"`
+	CreatedAt      time.Time  `json:"created_at"`
+}
 
 type Department struct {
 	ID             uuid.UUID `json:"id"`
 	Name           string    `json:"name"`
 	CreatedAt      time.Time `json:"created_at"`
 	OrganizationID uuid.UUID `json:"organization_id"`
+}
+
+type Designation struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	ID             uuid.UUID `json:"id"`
+	Name           string    `json:"name"`
+	Grade          *string   `json:"grade"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+type Document struct {
+	OrganizationID  uuid.UUID  `json:"organization_id"`
+	ID              uuid.UUID  `json:"id"`
+	EntityType      string     `json:"entity_type"`
+	EntityID        *uuid.UUID `json:"entity_id"`
+	FileName        string     `json:"file_name"`
+	StorageKey      string     `json:"storage_key"`
+	MimeType        *string    `json:"mime_type"`
+	SizeBytes       *int64     `json:"size_bytes"`
+	UploadedBy      *uuid.UUID `json:"uploaded_by"`
+	IsClientVisible bool       `json:"is_client_visible"`
+	CreatedAt       time.Time  `json:"created_at"`
 }
 
 type Employee struct {
@@ -28,6 +122,160 @@ type Employee struct {
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`
 	OrganizationID uuid.UUID  `json:"organization_id"`
+	DesignationID  *uuid.UUID `json:"designation_id"`
+	ManagerID      *uuid.UUID `json:"manager_id"`
+	Phone          *string    `json:"phone"`
+	Pan            *string    `json:"pan"`
+	AadhaarLast4   *string    `json:"aadhaar_last4"`
+	PfNumber       *string    `json:"pf_number"`
+	EsiNumber      *string    `json:"esi_number"`
+	BankAccount    *string    `json:"bank_account"`
+	BankIfsc       *string    `json:"bank_ifsc"`
+}
+
+type Expense struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	VendorID       *uuid.UUID     `json:"vendor_id"`
+	CategoryID     *uuid.UUID     `json:"category_id"`
+	ProjectID      *uuid.UUID     `json:"project_id"`
+	IncurredOn     time.Time      `json:"incurred_on"`
+	Description    string         `json:"description"`
+	Amount         pgtype.Numeric `json:"amount"`
+	GstAmount      pgtype.Numeric `json:"gst_amount"`
+	TdsSection     *string        `json:"tds_section"`
+	TdsRate        pgtype.Numeric `json:"tds_rate"`
+	TdsAmount      pgtype.Numeric `json:"tds_amount"`
+	Total          pgtype.Numeric `json:"total"`
+	PaymentStatus  string         `json:"payment_status"`
+	IsBillable     bool           `json:"is_billable"`
+	ReceiptRef     *string        `json:"receipt_ref"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
+type ExpenseCategory struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	ID             uuid.UUID `json:"id"`
+	Name           string    `json:"name"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+type Invoice struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	ClientID       uuid.UUID      `json:"client_id"`
+	ProjectID      *uuid.UUID     `json:"project_id"`
+	QuotationID    *uuid.UUID     `json:"quotation_id"`
+	Number         string         `json:"number"`
+	IssueDate      time.Time      `json:"issue_date"`
+	DueDate        *time.Time     `json:"due_date"`
+	Status         string         `json:"status"`
+	PlaceOfSupply  *string        `json:"place_of_supply"`
+	IsInterstate   bool           `json:"is_interstate"`
+	ReverseCharge  bool           `json:"reverse_charge"`
+	Currency       string         `json:"currency"`
+	Subtotal       pgtype.Numeric `json:"subtotal"`
+	DiscountTotal  pgtype.Numeric `json:"discount_total"`
+	CgstTotal      pgtype.Numeric `json:"cgst_total"`
+	SgstTotal      pgtype.Numeric `json:"sgst_total"`
+	IgstTotal      pgtype.Numeric `json:"igst_total"`
+	CessTotal      pgtype.Numeric `json:"cess_total"`
+	RoundOff       pgtype.Numeric `json:"round_off"`
+	Total          pgtype.Numeric `json:"total"`
+	AmountPaid     pgtype.Numeric `json:"amount_paid"`
+	Notes          *string        `json:"notes"`
+	IssuedAt       *time.Time     `json:"issued_at"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
+type InvoiceItem struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	InvoiceID      uuid.UUID      `json:"invoice_id"`
+	ItemID         *uuid.UUID     `json:"item_id"`
+	LineNo         int32          `json:"line_no"`
+	Description    string         `json:"description"`
+	HsnSac         *string        `json:"hsn_sac"`
+	Quantity       pgtype.Numeric `json:"quantity"`
+	Unit           *string        `json:"unit"`
+	Rate           pgtype.Numeric `json:"rate"`
+	DiscountPct    pgtype.Numeric `json:"discount_pct"`
+	TaxableValue   pgtype.Numeric `json:"taxable_value"`
+	CgstRate       pgtype.Numeric `json:"cgst_rate"`
+	CgstAmount     pgtype.Numeric `json:"cgst_amount"`
+	SgstRate       pgtype.Numeric `json:"sgst_rate"`
+	SgstAmount     pgtype.Numeric `json:"sgst_amount"`
+	IgstRate       pgtype.Numeric `json:"igst_rate"`
+	IgstAmount     pgtype.Numeric `json:"igst_amount"`
+	CessRate       pgtype.Numeric `json:"cess_rate"`
+	CessAmount     pgtype.Numeric `json:"cess_amount"`
+	LineTotal      pgtype.Numeric `json:"line_total"`
+}
+
+type Item struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	Code           string         `json:"code"`
+	Name           string         `json:"name"`
+	Kind           string         `json:"kind"`
+	HsnSac         *string        `json:"hsn_sac"`
+	Unit           string         `json:"unit"`
+	Rate           pgtype.Numeric `json:"rate"`
+	TaxRateID      *uuid.UUID     `json:"tax_rate_id"`
+	IsActive       bool           `json:"is_active"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
+type LeaveRequest struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	EmployeeID     uuid.UUID      `json:"employee_id"`
+	LeaveTypeID    uuid.UUID      `json:"leave_type_id"`
+	FromDate       time.Time      `json:"from_date"`
+	ToDate         time.Time      `json:"to_date"`
+	Days           pgtype.Numeric `json:"days"`
+	Reason         *string        `json:"reason"`
+	Status         string         `json:"status"`
+	DecidedBy      *uuid.UUID     `json:"decided_by"`
+	DecidedAt      *time.Time     `json:"decided_at"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
+type LeaveType struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	Name           string         `json:"name"`
+	DaysPerYear    pgtype.Numeric `json:"days_per_year"`
+	IsPaid         bool           `json:"is_paid"`
+	CreatedAt      time.Time      `json:"created_at"`
+}
+
+type Milestone struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	ProjectID      uuid.UUID      `json:"project_id"`
+	Name           string         `json:"name"`
+	Amount         pgtype.Numeric `json:"amount"`
+	DueOn          *time.Time     `json:"due_on"`
+	Status         string         `json:"status"`
+	CompletedAt    *time.Time     `json:"completed_at"`
+	CreatedAt      time.Time      `json:"created_at"`
+}
+
+type Notification struct {
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	ID             uuid.UUID  `json:"id"`
+	UserID         uuid.UUID  `json:"user_id"`
+	Kind           string     `json:"kind"`
+	Title          string     `json:"title"`
+	Body           *string    `json:"body"`
+	Link           *string    `json:"link"`
+	ReadAt         *time.Time `json:"read_at"`
+	CreatedAt      time.Time  `json:"created_at"`
 }
 
 type Organization struct {
@@ -37,4 +285,309 @@ type Organization struct {
 	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	LegalName *string   `json:"legal_name"`
+	Gstin     *string   `json:"gstin"`
+	Pan       *string   `json:"pan"`
+	StateCode *string   `json:"state_code"`
+	Address   *string   `json:"address"`
+	Phone     *string   `json:"phone"`
+	Email     *string   `json:"email"`
+}
+
+type OrganizationSubscription struct {
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	ID             uuid.UUID  `json:"id"`
+	PlanID         uuid.UUID  `json:"plan_id"`
+	Status         string     `json:"status"`
+	StartedOn      time.Time  `json:"started_on"`
+	RenewsOn       *time.Time `json:"renews_on"`
+	CancelledAt    *time.Time `json:"cancelled_at"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+}
+
+type Payment struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	ClientID       uuid.UUID      `json:"client_id"`
+	InvoiceID      *uuid.UUID     `json:"invoice_id"`
+	ReceivedOn     time.Time      `json:"received_on"`
+	Amount         pgtype.Numeric `json:"amount"`
+	TdsDeducted    pgtype.Numeric `json:"tds_deducted"`
+	Method         string         `json:"method"`
+	Reference      *string        `json:"reference"`
+	Notes          *string        `json:"notes"`
+	CreatedAt      time.Time      `json:"created_at"`
+}
+
+type PayrollRun struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	PeriodMonth    int32          `json:"period_month"`
+	PeriodYear     int32          `json:"period_year"`
+	Status         string         `json:"status"`
+	LockedAt       *time.Time     `json:"locked_at"`
+	PaidAt         *time.Time     `json:"paid_at"`
+	TotalGross     pgtype.Numeric `json:"total_gross"`
+	TotalNet       pgtype.Numeric `json:"total_net"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
+type Payslip struct {
+	OrganizationID  uuid.UUID      `json:"organization_id"`
+	ID              uuid.UUID      `json:"id"`
+	PayrollRunID    uuid.UUID      `json:"payroll_run_id"`
+	EmployeeID      uuid.UUID      `json:"employee_id"`
+	DaysPaid        pgtype.Numeric `json:"days_paid"`
+	Basic           pgtype.Numeric `json:"basic"`
+	Hra             pgtype.Numeric `json:"hra"`
+	Allowances      pgtype.Numeric `json:"allowances"`
+	Gross           pgtype.Numeric `json:"gross"`
+	PfEmployee      pgtype.Numeric `json:"pf_employee"`
+	PfEmployer      pgtype.Numeric `json:"pf_employer"`
+	EsiEmployee     pgtype.Numeric `json:"esi_employee"`
+	EsiEmployer     pgtype.Numeric `json:"esi_employer"`
+	ProfessionalTax pgtype.Numeric `json:"professional_tax"`
+	Tds             pgtype.Numeric `json:"tds"`
+	OtherDeduction  pgtype.Numeric `json:"other_deduction"`
+	NetPay          pgtype.Numeric `json:"net_pay"`
+	CreatedAt       time.Time      `json:"created_at"`
+}
+
+type Plan struct {
+	ID           uuid.UUID      `json:"id"`
+	Code         string         `json:"code"`
+	Name         string         `json:"name"`
+	PriceMonthly pgtype.Numeric `json:"price_monthly"`
+	MaxUsers     *int32         `json:"max_users"`
+	Features     []byte         `json:"features"`
+	IsActive     bool           `json:"is_active"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+}
+
+type PlatformUser struct {
+	ID           uuid.UUID  `json:"id"`
+	Email        string     `json:"email"`
+	FullName     string     `json:"full_name"`
+	PasswordHash string     `json:"password_hash"`
+	Role         string     `json:"role"`
+	Status       string     `json:"status"`
+	LastLoginAt  *time.Time `json:"last_login_at"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+}
+
+type Project struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	ClientID       *uuid.UUID     `json:"client_id"`
+	Code           string         `json:"code"`
+	Name           string         `json:"name"`
+	Description    *string        `json:"description"`
+	Status         string         `json:"status"`
+	BillingType    string         `json:"billing_type"`
+	Budget         pgtype.Numeric `json:"budget"`
+	StartsOn       *time.Time     `json:"starts_on"`
+	EndsOn         *time.Time     `json:"ends_on"`
+	ManagerID      *uuid.UUID     `json:"manager_id"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
+type ProjectMember struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	ProjectID      uuid.UUID      `json:"project_id"`
+	EmployeeID     uuid.UUID      `json:"employee_id"`
+	Role           *string        `json:"role"`
+	AllocationPct  pgtype.Numeric `json:"allocation_pct"`
+	CreatedAt      time.Time      `json:"created_at"`
+}
+
+type Quotation struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	ClientID       uuid.UUID      `json:"client_id"`
+	ProjectID      *uuid.UUID     `json:"project_id"`
+	Number         string         `json:"number"`
+	IssueDate      time.Time      `json:"issue_date"`
+	ValidUntil     *time.Time     `json:"valid_until"`
+	Status         string         `json:"status"`
+	Subtotal       pgtype.Numeric `json:"subtotal"`
+	TaxTotal       pgtype.Numeric `json:"tax_total"`
+	Total          pgtype.Numeric `json:"total"`
+	Notes          *string        `json:"notes"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
+type QuotationItem struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	QuotationID    uuid.UUID      `json:"quotation_id"`
+	ItemID         *uuid.UUID     `json:"item_id"`
+	LineNo         int32          `json:"line_no"`
+	Description    string         `json:"description"`
+	HsnSac         *string        `json:"hsn_sac"`
+	Quantity       pgtype.Numeric `json:"quantity"`
+	Rate           pgtype.Numeric `json:"rate"`
+	DiscountPct    pgtype.Numeric `json:"discount_pct"`
+	TaxableValue   pgtype.Numeric `json:"taxable_value"`
+	TaxRate        pgtype.Numeric `json:"tax_rate"`
+	TaxAmount      pgtype.Numeric `json:"tax_amount"`
+	LineTotal      pgtype.Numeric `json:"line_total"`
+}
+
+type Role struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	ID             uuid.UUID `json:"id"`
+	Code           string    `json:"code"`
+	Name           string    `json:"name"`
+	IsSystem       bool      `json:"is_system"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+type RolePermission struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	ID             uuid.UUID `json:"id"`
+	RoleID         uuid.UUID `json:"role_id"`
+	Module         string    `json:"module"`
+	Action         string    `json:"action"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+type SalaryStructure struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	EmployeeID     uuid.UUID      `json:"employee_id"`
+	EffectiveFrom  time.Time      `json:"effective_from"`
+	CtcAnnual      pgtype.Numeric `json:"ctc_annual"`
+	Basic          pgtype.Numeric `json:"basic"`
+	Hra            pgtype.Numeric `json:"hra"`
+	SpecialAllow   pgtype.Numeric `json:"special_allow"`
+	OtherAllow     pgtype.Numeric `json:"other_allow"`
+	PfApplicable   bool           `json:"pf_applicable"`
+	EsiApplicable  bool           `json:"esi_applicable"`
+	CreatedAt      time.Time      `json:"created_at"`
+}
+
+type Session struct {
+	OrganizationID uuid.UUID   `json:"organization_id"`
+	ID             uuid.UUID   `json:"id"`
+	UserID         uuid.UUID   `json:"user_id"`
+	TokenHash      string      `json:"token_hash"`
+	UserAgent      *string     `json:"user_agent"`
+	Ip             *netip.Addr `json:"ip"`
+	ExpiresAt      time.Time   `json:"expires_at"`
+	RevokedAt      *time.Time  `json:"revoked_at"`
+	CreatedAt      time.Time   `json:"created_at"`
+}
+
+type Task struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	ProjectID      uuid.UUID      `json:"project_id"`
+	MilestoneID    *uuid.UUID     `json:"milestone_id"`
+	ParentTaskID   *uuid.UUID     `json:"parent_task_id"`
+	Title          string         `json:"title"`
+	Description    *string        `json:"description"`
+	AssigneeID     *uuid.UUID     `json:"assignee_id"`
+	Status         string         `json:"status"`
+	Priority       string         `json:"priority"`
+	EstimateHours  pgtype.Numeric `json:"estimate_hours"`
+	DueOn          *time.Time     `json:"due_on"`
+	CompletedAt    *time.Time     `json:"completed_at"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
+type TaxRate struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	Name           string         `json:"name"`
+	Rate           pgtype.Numeric `json:"rate"`
+	Kind           string         `json:"kind"`
+	IsActive       bool           `json:"is_active"`
+	CreatedAt      time.Time      `json:"created_at"`
+}
+
+type Ticket struct {
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	ID             uuid.UUID  `json:"id"`
+	ClientID       *uuid.UUID `json:"client_id"`
+	ProjectID      *uuid.UUID `json:"project_id"`
+	Number         string     `json:"number"`
+	Subject        string     `json:"subject"`
+	Description    *string    `json:"description"`
+	RaisedBy       *uuid.UUID `json:"raised_by"`
+	AssigneeID     *uuid.UUID `json:"assignee_id"`
+	Status         string     `json:"status"`
+	Priority       string     `json:"priority"`
+	DueAt          *time.Time `json:"due_at"`
+	ResolvedAt     *time.Time `json:"resolved_at"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+}
+
+type TicketComment struct {
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	ID             uuid.UUID  `json:"id"`
+	TicketID       uuid.UUID  `json:"ticket_id"`
+	AuthorID       *uuid.UUID `json:"author_id"`
+	Body           string     `json:"body"`
+	IsInternal     bool       `json:"is_internal"`
+	CreatedAt      time.Time  `json:"created_at"`
+}
+
+type Timesheet struct {
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	EmployeeID     uuid.UUID      `json:"employee_id"`
+	ProjectID      uuid.UUID      `json:"project_id"`
+	TaskID         *uuid.UUID     `json:"task_id"`
+	OnDate         time.Time      `json:"on_date"`
+	Hours          pgtype.Numeric `json:"hours"`
+	IsBillable     bool           `json:"is_billable"`
+	Note           *string        `json:"note"`
+	Status         string         `json:"status"`
+	CreatedAt      time.Time      `json:"created_at"`
+}
+
+type User struct {
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	ID             uuid.UUID  `json:"id"`
+	EmployeeID     *uuid.UUID `json:"employee_id"`
+	Email          string     `json:"email"`
+	FullName       string     `json:"full_name"`
+	PasswordHash   string     `json:"password_hash"`
+	Portal         string     `json:"portal"`
+	Status         string     `json:"status"`
+	LastLoginAt    *time.Time `json:"last_login_at"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+}
+
+type UserRole struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	ID             uuid.UUID `json:"id"`
+	UserID         uuid.UUID `json:"user_id"`
+	RoleID         uuid.UUID `json:"role_id"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+type Vendor struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	ID             uuid.UUID `json:"id"`
+	Name           string    `json:"name"`
+	Gstin          *string   `json:"gstin"`
+	Pan            *string   `json:"pan"`
+	StateCode      *string   `json:"state_code"`
+	Address        *string   `json:"address"`
+	Email          *string   `json:"email"`
+	Phone          *string   `json:"phone"`
+	Status         string    `json:"status"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }

@@ -43,7 +43,7 @@ VALUES (
     coalesce($6::text, 'active'),
     $7::date
 )
-RETURNING id, department_id, full_name, email, title, status, hired_on, created_at, updated_at, organization_id
+RETURNING id, department_id, full_name, email, title, status, hired_on, created_at, updated_at, organization_id, designation_id, manager_id, phone, pan, aadhaar_last4, pf_number, esi_number, bank_account, bank_ifsc
 `
 
 type CreateEmployeeParams struct {
@@ -78,6 +78,15 @@ func (q *Queries) CreateEmployee(ctx context.Context, arg CreateEmployeeParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.OrganizationID,
+		&i.DesignationID,
+		&i.ManagerID,
+		&i.Phone,
+		&i.Pan,
+		&i.AadhaarLast4,
+		&i.PfNumber,
+		&i.EsiNumber,
+		&i.BankAccount,
+		&i.BankIfsc,
 	)
 	return i, err
 }
@@ -102,7 +111,7 @@ func (q *Queries) DeleteEmployee(ctx context.Context, arg DeleteEmployeeParams) 
 }
 
 const getEmployee = `-- name: GetEmployee :one
-SELECT id, department_id, full_name, email, title, status, hired_on, created_at, updated_at, organization_id FROM employees
+SELECT id, department_id, full_name, email, title, status, hired_on, created_at, updated_at, organization_id, designation_id, manager_id, phone, pan, aadhaar_last4, pf_number, esi_number, bank_account, bank_ifsc FROM employees
 WHERE organization_id = $1::uuid
   AND id = $2::uuid
 `
@@ -126,13 +135,22 @@ func (q *Queries) GetEmployee(ctx context.Context, arg GetEmployeeParams) (Emplo
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.OrganizationID,
+		&i.DesignationID,
+		&i.ManagerID,
+		&i.Phone,
+		&i.Pan,
+		&i.AadhaarLast4,
+		&i.PfNumber,
+		&i.EsiNumber,
+		&i.BankAccount,
+		&i.BankIfsc,
 	)
 	return i, err
 }
 
 const listEmployees = `-- name: ListEmployees :many
 
-SELECT id, department_id, full_name, email, title, status, hired_on, created_at, updated_at, organization_id FROM employees
+SELECT id, department_id, full_name, email, title, status, hired_on, created_at, updated_at, organization_id, designation_id, manager_id, phone, pan, aadhaar_last4, pf_number, esi_number, bank_account, bank_ifsc FROM employees
 WHERE organization_id = $1::uuid
   AND ($2::uuid IS NULL OR department_id = $2::uuid)
   AND ($3::text IS NULL OR status = $3::text)
@@ -176,6 +194,15 @@ func (q *Queries) ListEmployees(ctx context.Context, arg ListEmployeesParams) ([
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.OrganizationID,
+			&i.DesignationID,
+			&i.ManagerID,
+			&i.Phone,
+			&i.Pan,
+			&i.AadhaarLast4,
+			&i.PfNumber,
+			&i.EsiNumber,
+			&i.BankAccount,
+			&i.BankIfsc,
 		); err != nil {
 			return nil, err
 		}
@@ -198,7 +225,7 @@ SET department_id = coalesce($1::uuid, department_id),
     updated_at    = now()
 WHERE organization_id = $7::uuid
   AND id = $8::uuid
-RETURNING id, department_id, full_name, email, title, status, hired_on, created_at, updated_at, organization_id
+RETURNING id, department_id, full_name, email, title, status, hired_on, created_at, updated_at, organization_id, designation_id, manager_id, phone, pan, aadhaar_last4, pf_number, esi_number, bank_account, bank_ifsc
 `
 
 type UpdateEmployeeParams struct {
@@ -235,6 +262,15 @@ func (q *Queries) UpdateEmployee(ctx context.Context, arg UpdateEmployeeParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.OrganizationID,
+		&i.DesignationID,
+		&i.ManagerID,
+		&i.Phone,
+		&i.Pan,
+		&i.AadhaarLast4,
+		&i.PfNumber,
+		&i.EsiNumber,
+		&i.BankAccount,
+		&i.BankIfsc,
 	)
 	return i, err
 }

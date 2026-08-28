@@ -14,7 +14,7 @@ import (
 const createOrganization = `-- name: CreateOrganization :one
 INSERT INTO organizations (name, slug)
 VALUES ($1::text, $2::text)
-RETURNING id, name, slug, status, created_at, updated_at
+RETURNING id, name, slug, status, created_at, updated_at, legal_name, gstin, pan, state_code, address, phone, email
 `
 
 type CreateOrganizationParams struct {
@@ -32,12 +32,19 @@ func (q *Queries) CreateOrganization(ctx context.Context, arg CreateOrganization
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LegalName,
+		&i.Gstin,
+		&i.Pan,
+		&i.StateCode,
+		&i.Address,
+		&i.Phone,
+		&i.Email,
 	)
 	return i, err
 }
 
 const getOrganization = `-- name: GetOrganization :one
-SELECT id, name, slug, status, created_at, updated_at FROM organizations
+SELECT id, name, slug, status, created_at, updated_at, legal_name, gstin, pan, state_code, address, phone, email FROM organizations
 WHERE id = $1::uuid
 `
 
@@ -51,12 +58,19 @@ func (q *Queries) GetOrganization(ctx context.Context, id uuid.UUID) (Organizati
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LegalName,
+		&i.Gstin,
+		&i.Pan,
+		&i.StateCode,
+		&i.Address,
+		&i.Phone,
+		&i.Email,
 	)
 	return i, err
 }
 
 const getOrganizationBySlug = `-- name: GetOrganizationBySlug :one
-SELECT id, name, slug, status, created_at, updated_at FROM organizations
+SELECT id, name, slug, status, created_at, updated_at, legal_name, gstin, pan, state_code, address, phone, email FROM organizations
 WHERE lower(slug) = lower($1::text)
 `
 
@@ -70,13 +84,20 @@ func (q *Queries) GetOrganizationBySlug(ctx context.Context, slug string) (Organ
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LegalName,
+		&i.Gstin,
+		&i.Pan,
+		&i.StateCode,
+		&i.Address,
+		&i.Phone,
+		&i.Email,
 	)
 	return i, err
 }
 
 const listOrganizations = `-- name: ListOrganizations :many
 
-SELECT id, name, slug, status, created_at, updated_at FROM organizations
+SELECT id, name, slug, status, created_at, updated_at, legal_name, gstin, pan, state_code, address, phone, email FROM organizations
 ORDER BY name
 `
 
@@ -99,6 +120,13 @@ func (q *Queries) ListOrganizations(ctx context.Context) ([]Organization, error)
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.LegalName,
+			&i.Gstin,
+			&i.Pan,
+			&i.StateCode,
+			&i.Address,
+			&i.Phone,
+			&i.Email,
 		); err != nil {
 			return nil, err
 		}
@@ -115,7 +143,7 @@ UPDATE organizations
 SET status = $1::text,
     updated_at = now()
 WHERE id = $2::uuid
-RETURNING id, name, slug, status, created_at, updated_at
+RETURNING id, name, slug, status, created_at, updated_at, legal_name, gstin, pan, state_code, address, phone, email
 `
 
 type UpdateOrganizationStatusParams struct {
@@ -133,6 +161,13 @@ func (q *Queries) UpdateOrganizationStatus(ctx context.Context, arg UpdateOrgani
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LegalName,
+		&i.Gstin,
+		&i.Pan,
+		&i.StateCode,
+		&i.Address,
+		&i.Phone,
+		&i.Email,
 	)
 	return i, err
 }
