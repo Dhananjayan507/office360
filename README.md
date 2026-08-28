@@ -84,6 +84,15 @@ Then from the repo root in PowerShell:
 ./make.ps1 migrate
 ```
 
+```bash
+./make.ps1 seed
+```
+
+`seed` is idempotent and creates the demo organisation that
+`PUBLIC_DEV_ORGANIZATION_ID` names. Skip it and every page is empty — a request
+naming an organisation that does not exist is not an error, it just matches no
+rows.
+
 Start the API, and the web app in a second terminal:
 
 ```bash
@@ -109,6 +118,7 @@ API on <http://localhost:8080>, web on <http://localhost:5173>.
 | `./make.ps1 nuke` | Stop **and delete the volume** — destroys local data |
 | `./make.ps1 migrate` | Apply pending migrations |
 | `./make.ps1 rollback` | Roll back the last migration |
+| `./make.ps1 seed` | Insert the demo organisation and a few rows (idempotent) |
 | `./make.ps1 sqlc` | Regenerate `internal/db` |
 | `./make.ps1 api` | Run the Go API |
 | `./make.ps1 web` | Run the SvelteKit dev server |

@@ -50,6 +50,7 @@ All tasks go through `make.ps1` at the repo root (PowerShell — this is a Windo
 ./make.ps1 nuke        # stop AND delete the volume — DESTROYS local data, prompts first
 ./make.ps1 migrate     # apply pending migrations (runs ./cmd/migrate)
 ./make.ps1 rollback    # roll back the last migration
+./make.ps1 seed        # demo organisation + a few rows, idempotent
 ./make.ps1 sqlc        # regenerate internal/db
 ./make.ps1 api         # run the Go API (blocks)
 ./make.ps1 web         # run the SvelteKit dev server (blocks)
@@ -258,6 +259,12 @@ signing key accepts forged tokens.
 - The web app sends `X-Organization-Id` from `PUBLIC_DEV_ORGANIZATION_ID`. With
   that unset every call is a 401, which is the API failing closed, not a bug.
   Both it and the header disappear on Day 4.
+- **An empty page usually means the seed was not run.** Naming an organisation
+  that does not exist is not an error — the scoped query simply matches nothing
+  and returns 200 with zero rows. `./make.ps1 seed` after `migrate`. This is a
+  different failure from a missing header, which is a 401.
+- Vite reads `.env` at start-up, so changing `PUBLIC_DEV_ORGANIZATION_ID` needs
+  the dev server restarted; HMR will not pick it up.
 - Svelte 5 runes mode is forced for project files in `vite.config.ts` — use
   `$props()` / `$derived()`, not `export let`.
 - The git identity here is set **per-repo** (`Dhananjayan507`), separate from the

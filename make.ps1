@@ -9,6 +9,7 @@
       nuke        Stop the container AND delete its volume — DESTROYS local data
       migrate     Apply all pending migrations
       rollback    Roll back the most recent migration
+      seed        Insert the demo organisation and a few rows (idempotent)
       sqlc        Regenerate api/internal/db from db/query + db/migrations
       api         Run the Go API on $API_PORT (default 8080)
       web         Run the SvelteKit dev server on 5173
@@ -18,7 +19,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('up', 'down', 'nuke', 'migrate', 'rollback', 'sqlc', 'api', 'web', 'check', 'psql')]
+    [ValidateSet('up', 'down', 'nuke', 'migrate', 'rollback', 'seed', 'sqlc', 'api', 'web', 'check', 'psql')]
     [string]$Task = 'check'
 )
 
@@ -82,6 +83,14 @@ switch ($Task) {
     'rollback' {
         Push-Location $Root
         try { go run ./cmd/migrate down 1; Assert-LastExit 'migrate down' } finally { Pop-Location }
+    }
+
+    'seed' {
+        # Development rows only, and idempotent - see internal/db/seed/dev.sql.
+        Get-Content (Join-Path $Root 'internal\db\seed\dev.sql') -Raw |
+            docker exec -i office360-postgres psql -U $env:POSTGRES_USER -d $env:POSTGRES_DB -v ON_ERROR_STOP=1
+        Assert-LastExit 'seed'
+        Write-Host 'Seeded the demo organisation.' -ForegroundColor Green
     }
 
     'sqlc' {
